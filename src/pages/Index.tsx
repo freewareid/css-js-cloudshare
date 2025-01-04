@@ -21,16 +21,34 @@ const Index = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (_event === 'SIGNED_IN') {
+        toast({
+          title: "Successfully signed in",
+          description: "Welcome back!",
+        });
+      } else if (_event === 'SIGNED_OUT') {
+        toast({
+          title: "Signed out successfully",
+        });
+      } else if (_event === 'USER_UPDATED') {
+        toast({
+          title: "Profile updated",
+        });
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [toast]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    toast({
-      title: "Signed out successfully",
-    });
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (!session) {
@@ -62,8 +80,22 @@ const Index = () => {
               variables: {
                 sign_up: {
                   password_label: 'Password (minimum 6 characters)',
+                  email_label: 'Email address',
+                  button_label: 'Sign up',
+                },
+                sign_in: {
+                  password_label: 'Your password',
+                  email_label: 'Your email address',
+                  button_label: 'Sign in',
                 },
               },
+            }}
+            onError={(error) => {
+              toast({
+                title: "Authentication Error",
+                description: error.message,
+                variant: "destructive",
+              });
             }}
           />
         </div>
