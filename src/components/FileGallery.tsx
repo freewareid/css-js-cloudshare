@@ -1,30 +1,45 @@
+import { useEffect, useState } from "react";
 import { FileCode, Trash2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+type FileGalleryProps = {
+  userId: string;
+};
 
 type File = {
   id: string;
   name: string;
   url: string;
   type: "css" | "js";
+  size: number;
 };
 
-const demoFiles: File[] = [
-  {
-    id: "1",
-    name: "styles.css",
-    url: "https://is3.cloudhost.id/demo/styles.css",
-    type: "css",
-  },
-  {
-    id: "2",
-    name: "script.js",
-    url: "https://is3.cloudhost.id/demo/script.js",
-    type: "js",
-  },
-];
-
-export const FileGallery = () => {
+export const FileGallery = ({ userId }: FileGalleryProps) => {
+  const [files, setFiles] = useState<File[]>([]);
   const { toast } = useToast();
+
+  const fetchFiles = async () => {
+    const { data, error } = await supabase
+      .from("files")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error) {
+      toast({
+        title: "Error fetching files",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFiles(data);
+  };
+
+  useEffect(() => {
+    fetchFiles();
+  }, [userId]);
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -42,9 +57,40 @@ export const FileGallery = () => {
     }
   };
 
+  const deleteFile = async (file: File) => {
+    try {
+      const filePath = `${userId}/${file.name}`;
+      const { error: storageError } = await supabase.storage
+        .from("files")
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from("files")
+        .delete()
+        .eq("id", file.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "File deleted",
+        description: file.name,
+      });
+
+      fetchFiles();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting file",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {demoFiles.map((file) => (
+      {files.map((file) => (
         <div
           key={file.id}
           className="group relative rounded-lg border p-4 hover:border-primary"
@@ -68,6 +114,7 @@ export const FileGallery = () => {
             </button>
           </div>
           <button
+            onClick={() => deleteFile(file)}
             className="absolute right-2 top-2 hidden rounded-md p-1 text-red-500 hover:bg-red-50 group-hover:block"
             title="Delete file"
           >
