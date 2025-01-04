@@ -75,21 +75,32 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
 
       try {
         setIsUploading(true);
-        const filePath = `${userId}/${file.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from("files")
-          .upload(filePath, file);
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userId', userId);
 
-        if (uploadError) throw uploadError;
+        const response = await fetch(
+          'https://wrczdncygntrvkzjcqmj.supabase.co/functions/v1/upload-to-r2',
+          {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+            }
+          }
+        );
 
-        const { data: urlData } = supabase.storage
-          .from("files")
-          .getPublicUrl(filePath);
+        if (!response.ok) {
+          throw new Error('Upload failed');
+        }
+
+        const data = await response.json();
 
         await supabase.from("files").insert({
           user_id: userId,
           name: file.name,
-          url: urlData.publicUrl,
+          url: data.url,
           type: file.name.split(".").pop() || "",
           size: file.size,
         });
