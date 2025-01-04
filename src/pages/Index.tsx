@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [session, setSession] = useState(null);
 
@@ -47,9 +45,26 @@ const Index = () => {
           </header>
           <Auth
             supabaseClient={supabase}
-            appearance={{ theme: ThemeSupa }}
+            appearance={{ 
+              theme: ThemeSupa,
+              variables: {
+                default: {
+                  colors: {
+                    brand: '#4F46E5',
+                    brandAccent: '#6366F1',
+                  },
+                },
+              },
+            }}
             theme="light"
             providers={[]}
+            localization={{
+              variables: {
+                sign_up: {
+                  password_label: 'Password (minimum 6 characters)',
+                },
+              },
+            }}
           />
         </div>
       </div>

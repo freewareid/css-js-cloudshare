@@ -9,10 +9,12 @@ type FileGalleryProps = {
 
 type File = {
   id: string;
+  user_id: string;
   name: string;
   url: string;
   type: "css" | "js";
   size: number;
+  created_at: string;
 };
 
 export const FileGallery = ({ userId }: FileGalleryProps) => {
@@ -34,7 +36,8 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
       return;
     }
 
-    setFiles(data);
+    // Cast the type to ensure it matches our File type
+    setFiles(data as File[]);
   };
 
   useEffect(() => {
