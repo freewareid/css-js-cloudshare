@@ -7,6 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Utility function to compress CSS
 const compressCSS = (css: string): string => {
   return css
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -14,6 +15,113 @@ const compressCSS = (css: string): string => {
     .replace(/\s*([{}:;,])\s*/g, '$1')
     .replace(/;\}/g, '}')
     .trim();
+};
+
+// Validate and get R2 configuration
+const getR2Config = () => {
+  const r2AccountId = Deno.env.get('R2_ACCOUNT_ID');
+  const r2AccessKeyId = Deno.env.get('R2_ACCESS_KEY_ID');
+  const r2SecretAccessKey = Deno.env.get('R2_SECRET_ACCESS_KEY');
+
+  if (!r2AccountId || !r2AccessKeyId || !r2SecretAccessKey) {
+    throw new Error('Missing R2 configuration');
+  }
+
+  return { r2AccountId, r2AccessKeyId, r2SecretAccessKey };
+};
+
+// Initialize R2 client
+const initializeR2Client = (config: ReturnType<typeof getR2Config>) => {
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${config.r2AccountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: config.r2AccessKeyId,
+      secretAccessKey: config.r2SecretAccessKey,
+    },
+  });
+};
+
+// Check user storage limit
+const checkStorageLimit = async (supabase: any, userId: string, fileSize: number) => {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('storage_used')
+    .eq('id', userId)
+    .single();
+
+  if (!profile) {
+    throw new Error('User profile not found');
+  }
+
+  if (profile.storage_used + fileSize > 1024 * 1024 * 1024) {
+    throw new Error('Storage limit exceeded');
+  }
+
+  return profile;
+};
+
+// Upload file to R2
+const uploadFileToR2 = async (R2: S3Client, key: string, fileContent: string | ArrayBuffer, contentType: string) => {
+  const uploadCommand = new PutObjectCommand({
+    Bucket: "st8", // Updated to use the correct bucket name
+    Key: key,
+    Body: fileContent,
+    ContentType: contentType,
+  });
+
+  await R2.send(uploadCommand);
+  return `https://pub-c7fe5d7345b64a8aa90756d140154223.r2.dev/${key}`;
+};
+
+// Update database records
+const updateDatabaseRecords = async (
+  supabase: any,
+  userId: string,
+  fileName: string,
+  fileUrl: string,
+  fileType: string,
+  fileSize: number,
+  profile: any
+) => {
+  const { data: existingFile } = await supabase
+    .from('files')
+    .select('size')
+    .eq('user_id', userId)
+    .eq('name', fileName)
+    .single();
+
+  if (existingFile) {
+    await supabase
+      .from('profiles')
+      .update({ 
+        storage_used: profile.storage_used - existingFile.size + fileSize 
+      })
+      .eq('id', userId);
+
+    await supabase
+      .from('files')
+      .delete()
+      .eq('user_id', userId)
+      .eq('name', fileName);
+  } else {
+    await supabase
+      .from('profiles')
+      .update({ 
+        storage_used: profile.storage_used + fileSize 
+      })
+      .eq('id', userId);
+  }
+
+  await supabase
+    .from('files')
+    .insert({
+      user_id: userId,
+      name: fileName,
+      url: fileUrl,
+      type: fileName.split('.').pop() || '',
+      size: fileSize,
+    });
 };
 
 serve(async (req) => {
@@ -35,129 +143,45 @@ serve(async (req) => {
       );
     }
 
-    // Log R2 configuration status
-    const r2AccountId = Deno.env.get('R2_ACCOUNT_ID');
-    const r2AccessKeyId = Deno.env.get('R2_ACCESS_KEY_ID');
-    const r2SecretAccessKey = Deno.env.get('R2_SECRET_ACCESS_KEY');
-
-    console.log("R2 Configuration Check:");
-    console.log("Account ID exists:", !!r2AccountId);
-    console.log("Access Key exists:", !!r2AccessKeyId);
-    console.log("Secret Key exists:", !!r2SecretAccessKey);
-
-    if (!r2AccountId || !r2AccessKeyId || !r2SecretAccessKey) {
-      console.error("Missing R2 configuration");
-      return new Response(
-        JSON.stringify({ error: 'R2 configuration is incomplete' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
+    const r2Config = getR2Config();
+    console.log("R2 Configuration validated");
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check user's storage limit
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('storage_used')
-      .eq('id', userId)
-      .single();
+    const profile = await checkStorageLimit(supabase, userId, file.size);
+    console.log("Storage limit checked");
 
-    if (!profile) {
-      return new Response(
-        JSON.stringify({ error: 'User profile not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      );
-    }
-
-    if (profile.storage_used + file.size > 1024 * 1024 * 1024) {
-      return new Response(
-        JSON.stringify({ error: 'Storage limit exceeded' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    // Process file content
     let fileContent = await file.text();
     if (file.name.endsWith('.css')) {
       fileContent = compressCSS(fileContent);
     }
 
     try {
-      console.log("Initializing R2 client");
-      const R2 = new S3Client({
-        region: "auto",
-        endpoint: `https://${r2AccountId}.r2.cloudflarestorage.com`,
-        credentials: {
-          accessKeyId: r2AccessKeyId,
-          secretAccessKey: r2SecretAccessKey,
-        },
-      });
+      const R2 = initializeR2Client(r2Config);
+      console.log("R2 client initialized");
 
       const key = `${userId}/${file.name}`;
       console.log("Attempting to upload file:", key);
       
-      // Upload to R2
-      const uploadCommand = new PutObjectCommand({
-        Bucket: "files",
-        Key: key,
-        Body: fileContent,
-        ContentType: file.type,
-      });
-
-      await R2.send(uploadCommand);
+      const fileUrl = await uploadFileToR2(R2, key, fileContent, file.type);
       console.log("File uploaded to R2 successfully");
 
-      const url = `https://pub-c7fe5d7345b64a8aa90756d140154223.r2.dev/${key}`;
-
-      // Delete old file if it exists with the same name
-      const { data: existingFile } = await supabase
-        .from('files')
-        .select('size')
-        .eq('user_id', userId)
-        .eq('name', file.name)
-        .single();
-
-      if (existingFile) {
-        // Update storage used (subtract old file size, add new file size)
-        await supabase
-          .from('profiles')
-          .update({ 
-            storage_used: profile.storage_used - existingFile.size + file.size 
-          })
-          .eq('id', userId);
-
-        // Delete old file record
-        await supabase
-          .from('files')
-          .delete()
-          .eq('user_id', userId)
-          .eq('name', file.name);
-      } else {
-        // Update storage used (add new file size)
-        await supabase
-          .from('profiles')
-          .update({ 
-            storage_used: profile.storage_used + file.size 
-          })
-          .eq('id', userId);
-      }
-
-      // Insert new file record
-      await supabase
-        .from('files')
-        .insert({
-          user_id: userId,
-          name: file.name,
-          url,
-          type: file.name.split('.').pop() || '',
-          size: file.size,
-        });
+      await updateDatabaseRecords(
+        supabase,
+        userId,
+        file.name,
+        fileUrl,
+        file.type,
+        file.size,
+        profile
+      );
+      console.log("Database records updated");
 
       return new Response(
-        JSON.stringify({ url }),
+        JSON.stringify({ url: fileUrl }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (r2Error) {
