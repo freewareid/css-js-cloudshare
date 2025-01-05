@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.511.0"
-import * as cleancss from "https://esm.sh/clean-css@5.3.2"
+import CleanCSS from "https://esm.sh/clean-css@5.3.2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,35 +17,40 @@ const s3Client = new S3Client({
 });
 
 const compressCSS = (css: string) => {
-  const cleanCSS = new cleancss();
+  const cleanCSS = new CleanCSS();
   return cleanCSS.minify(css).styles;
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const formData = await req.formData()
-    const file = formData.get('file') as File
-    const userId = formData.get('userId') as string
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+    const userId = formData.get('userId') as string;
 
     if (!file) {
       return new Response(
         JSON.stringify({ error: 'No file uploaded' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
+      );
     }
 
-    let fileBuffer = await file.arrayBuffer()
-    const fileName = `${userId}/${file.name}`
+    console.log('Processing file:', file.name, 'type:', file.type);
+
+    let fileBuffer = await file.arrayBuffer();
+    const fileName = `${userId}/${file.name}`;
 
     // Compress CSS files before upload
     if (file.name.endsWith('.css')) {
+      console.log('Compressing CSS file');
       const cssText = new TextDecoder().decode(fileBuffer);
       const compressedCSS = compressCSS(cssText);
       fileBuffer = new TextEncoder().encode(compressedCSS);
+      console.log('CSS compressed successfully');
     }
 
     const command = new PutObjectCommand({
@@ -55,9 +60,11 @@ serve(async (req) => {
       ContentType: file.type,
     });
 
-    await s3Client.send(command)
+    console.log('Uploading to R2:', fileName);
+    await s3Client.send(command);
+    console.log('Upload successful');
 
-    const fileUrl = `https://pub-c7fe5d7345b64a8aa90756d140154223.r2.dev/${fileName}`
+    const fileUrl = `https://pub-c7fe5d7345b64a8aa90756d140154223.r2.dev/${fileName}`;
 
     return new Response(
       JSON.stringify({ 
@@ -66,15 +73,13 @@ serve(async (req) => {
         type: file.type,
         size: fileBuffer.byteLength
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    )
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
+    console.error('Error processing upload:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    )
+    );
   }
-})
+});
