@@ -25,7 +25,8 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
     const { data, error } = await supabase
       .from("files")
       .select("*")
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .order('created_at', { ascending: false });
 
     if (error) {
       toast({
@@ -36,12 +37,32 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
       return;
     }
 
-    // Cast the type to ensure it matches our File type
     setFiles(data as File[]);
   };
 
   useEffect(() => {
     fetchFiles();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('public:files')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'files',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          fetchFiles();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   const copyToClipboard = async (text: string) => {
@@ -62,13 +83,6 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
 
   const deleteFile = async (file: File) => {
     try {
-      const filePath = `${userId}/${file.name}`;
-      const { error: storageError } = await supabase.storage
-        .from("files")
-        .remove([filePath]);
-
-      if (storageError) throw storageError;
-
       const { error: dbError } = await supabase
         .from("files")
         .delete()
@@ -80,8 +94,6 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
         title: "File deleted",
         description: file.name,
       });
-
-      fetchFiles();
     } catch (error: any) {
       toast({
         title: "Error deleting file",
@@ -96,7 +108,7 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
       {files.map((file) => (
         <div
           key={file.id}
-          className="group relative rounded-lg border p-4 hover:border-primary"
+          className="group relative rounded-lg border bg-white p-4 shadow-sm transition-all hover:shadow-md"
         >
           <div className="mb-2 flex items-center gap-2">
             <FileCode className="h-5 w-5 text-primary" />

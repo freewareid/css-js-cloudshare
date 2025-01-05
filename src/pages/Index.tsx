@@ -30,26 +30,11 @@ const Index = () => {
         toast({
           title: "Signed out successfully",
         });
-      } else if (_event === 'USER_UPDATED') {
-        toast({
-          title: "Profile updated",
-        });
       }
     });
 
     return () => subscription.unsubscribe();
   }, [toast]);
-
-  const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: "Error signing out",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   if (!session) {
     return (
@@ -80,22 +65,8 @@ const Index = () => {
               variables: {
                 sign_up: {
                   password_label: 'Password (minimum 6 characters)',
-                  email_label: 'Email address',
-                  button_label: 'Sign up',
-                },
-                sign_in: {
-                  password_label: 'Your password',
-                  email_label: 'Your email address',
-                  button_label: 'Sign in',
                 },
               },
-            }}
-            onError={(error) => {
-              toast({
-                title: "Authentication Error",
-                description: error.message,
-                variant: "destructive",
-              });
             }}
           />
         </div>
@@ -105,31 +76,33 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <header className="bg-gray-100">
-        <div className="container flex h-16 items-center justify-between px-6">
+      <header className="bg-white shadow-sm">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <h1 className="text-xl font-bold text-gray-900">CSS Host</h1>
-          <Button variant="ghost" onClick={handleSignOut}>
+          <Button variant="ghost" onClick={() => supabase.auth.signOut()}>
             <LogOut className="mr-2 h-4 w-4" />
             Sign Out
           </Button>
         </div>
       </header>
 
-      <div className="container py-8">
-        <section className="mb-12 animate-fadeIn">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">
-            Upload Files
-          </h2>
-          <FileUpload userId={session.user.id} />
-        </section>
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid gap-8">
+          <section className="animate-fadeIn">
+            <h2 className="mb-4 text-xl font-semibold text-gray-900">
+              Upload Files
+            </h2>
+            <FileUpload userId={session.user.id} />
+          </section>
 
-        <section className="animate-fadeIn">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">
-            Your Files
-          </h2>
-          <FileGallery userId={session.user.id} />
-        </section>
-      </div>
+          <section className="animate-fadeIn">
+            <h2 className="mb-4 text-xl font-semibold text-gray-900">
+              Your Files
+            </h2>
+            <FileGallery userId={session.user.id} />
+          </section>
+        </div>
+      </main>
     </div>
   );
 };

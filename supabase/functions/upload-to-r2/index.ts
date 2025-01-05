@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.511.0"
+import * as cleancss from "https://esm.sh/clean-css@5.3.2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,11 @@ const s3Client = new S3Client({
     secretAccessKey: "3fc824fa6032c70df66de3d23edfc88399e7f062dc8f49a37521d35152cdd305",
   },
 });
+
+const compressCSS = (css: string) => {
+  const cleanCSS = new cleancss();
+  return cleanCSS.minify(css).styles;
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -32,8 +38,15 @@ serve(async (req) => {
       )
     }
 
-    const fileBuffer = await file.arrayBuffer()
+    let fileBuffer = await file.arrayBuffer()
     const fileName = `${userId}/${file.name}`
+
+    // Compress CSS files before upload
+    if (file.name.endsWith('.css')) {
+      const cssText = new TextDecoder().decode(fileBuffer);
+      const compressedCSS = compressCSS(cssText);
+      fileBuffer = new TextEncoder().encode(compressedCSS);
+    }
 
     const command = new PutObjectCommand({
       Bucket: "st8",
@@ -51,7 +64,7 @@ serve(async (req) => {
         url: fileUrl,
         name: file.name,
         type: file.type,
-        size: file.size
+        size: fileBuffer.byteLength
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
