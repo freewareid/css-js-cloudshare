@@ -54,10 +54,10 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
     }
 
     for (const file of validFiles) {
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Maximum file size is 5MB",
+          description: "Maximum file size is 1MB",
           variant: "destructive",
         });
         continue;
@@ -92,18 +92,11 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
         );
 
         if (!response.ok) {
-          throw new Error('Upload failed');
+          const error = await response.json();
+          throw new Error(error.error || 'Upload failed');
         }
 
         const data = await response.json();
-
-        await supabase.from("files").insert({
-          user_id: userId,
-          name: file.name,
-          url: data.url,
-          type: file.name.split(".").pop() || "",
-          size: file.size,
-        });
 
         toast({
           title: "File uploaded successfully",
@@ -149,7 +142,9 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
             />
           </label>
         </div>
-        <p className="text-sm text-gray-500">Only CSS and JS files are allowed</p>
+        <p className="text-sm text-gray-500">
+          Maximum file size: 1MB. Only CSS and JS files are allowed.
+        </p>
       </div>
     </div>
   );
