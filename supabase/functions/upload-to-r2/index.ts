@@ -9,15 +9,14 @@ const corsHeaders = {
 
 const compressCSS = (css: string): string => {
   return css
-    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove comments
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-    .replace(/\s*([{}:;,])\s*/g, '$1') // Remove spaces around special characters
-    .replace(/;\}/g, '}') // Remove unnecessary semicolons
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([{}:;,])\s*/g, '$1')
+    .replace(/;\}/g, '}')
     .trim();
 };
 
 serve(async (req) => {
-  // Add detailed logging
   console.log("Function started");
 
   if (req.method === 'OPTIONS') {
@@ -36,15 +35,15 @@ serve(async (req) => {
       );
     }
 
-    // Log environment variables (excluding sensitive values)
-    console.log("R2 Account ID exists:", !!Deno.env.get('R2_ACCOUNT_ID'));
-    console.log("R2 Access Key exists:", !!Deno.env.get('R2_ACCESS_KEY_ID'));
-    console.log("R2 Secret Key exists:", !!Deno.env.get('R2_SECRET_ACCESS_KEY'));
-
-    // Validate R2 configuration
+    // Log R2 configuration status
     const r2AccountId = Deno.env.get('R2_ACCOUNT_ID');
     const r2AccessKeyId = Deno.env.get('R2_ACCESS_KEY_ID');
     const r2SecretAccessKey = Deno.env.get('R2_SECRET_ACCESS_KEY');
+
+    console.log("R2 Configuration Check:");
+    console.log("Account ID exists:", !!r2AccountId);
+    console.log("Access Key exists:", !!r2AccessKeyId);
+    console.log("Secret Key exists:", !!r2SecretAccessKey);
 
     if (!r2AccountId || !r2AccessKeyId || !r2SecretAccessKey) {
       console.error("Missing R2 configuration");
@@ -59,7 +58,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check user's storage limit (1GB)
+    // Check user's storage limit
     const { data: profile } = await supabase
       .from('profiles')
       .select('storage_used')
@@ -86,8 +85,8 @@ serve(async (req) => {
       fileContent = compressCSS(fileContent);
     }
 
-    // Configure R2 with explicit error handling
     try {
+      console.log("Initializing R2 client");
       const R2 = new S3Client({
         region: "auto",
         endpoint: `https://${r2AccountId}.r2.cloudflarestorage.com`,
@@ -98,17 +97,17 @@ serve(async (req) => {
       });
 
       const key = `${userId}/${file.name}`;
+      console.log("Attempting to upload file:", key);
       
       // Upload to R2
-      await R2.send(
-        new PutObjectCommand({
-          Bucket: "files",
-          Key: key,
-          Body: fileContent,
-          ContentType: file.type,
-        })
-      );
+      const uploadCommand = new PutObjectCommand({
+        Bucket: "files",
+        Key: key,
+        Body: fileContent,
+        ContentType: file.type,
+      });
 
+      await R2.send(uploadCommand);
       console.log("File uploaded to R2 successfully");
 
       const url = `https://pub-c7fe5d7345b64a8aa90756d140154223.r2.dev/${key}`;
