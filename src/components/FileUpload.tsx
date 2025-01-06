@@ -13,7 +13,7 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
   const { toast } = useToast();
 
   const validateFileName = (name: string) => {
-    const regex = /^[a-zA-Z0-9]{1,12}\.(css|js)$/;
+    const regex = /^[a-zA-Z0-9]{1,255}\.(css|js)$/;
     return regex.test(name);
   };
 
@@ -67,7 +67,7 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
         toast({
           title: "Invalid filename",
           description:
-            "Filename must be 1-12 characters long and contain only letters and numbers",
+            "Filename must contain only letters and numbers and have a .css or .js extension",
           variant: "destructive",
         });
         continue;
