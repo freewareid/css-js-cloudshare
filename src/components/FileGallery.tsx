@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { FileCode, Trash2, Copy } from "lucide-react";
+import { FileCode, Trash2, Copy, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Progress } from "@/components/ui/progress";
 
 type FileGalleryProps = {
   userId: string;
@@ -27,7 +28,11 @@ const formatFileSize = (bytes: number) => {
 
 export const FileGallery = ({ userId }: FileGalleryProps) => {
   const [files, setFiles] = useState<File[]>([]);
-  const [storageInfo, setStorageInfo] = useState({ used: 0, total: 1024 * 1024 * 1024 });
+  const [storageInfo, setStorageInfo] = useState({ 
+    used: 0, 
+    total: 1024 * 1024 * 1024, // 1GB in bytes
+    fileCount: 0 
+  });
   const { toast } = useToast();
 
   const fetchFiles = async () => {
@@ -62,7 +67,11 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
     }
 
     setFiles(filesData as File[]);
-    setStorageInfo(prev => ({ ...prev, used: profileData.storage_used }));
+    setStorageInfo(prev => ({ 
+      ...prev, 
+      used: profileData.storage_used,
+      fileCount: filesData?.length || 0
+    }));
   };
 
   useEffect(() => {
@@ -132,17 +141,21 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border bg-white p-4 shadow-sm">
-        <h3 className="mb-2 font-medium">Storage Usage</h3>
-        <div className="mb-2 h-2 w-full rounded-full bg-gray-200">
-          <div
-            className="h-2 rounded-full bg-primary transition-all"
-            style={{ width: `${Math.min(storageUsedPercentage, 100)}%` }}
-          />
+      <div className="rounded-lg border bg-white p-6 shadow-sm">
+        <div className="mb-4">
+          <h3 className="text-lg font-medium">Storage Usage</h3>
+          <p className="text-sm text-gray-500">
+            {storageInfo.fileCount} file{storageInfo.fileCount !== 1 ? 's' : ''} stored
+          </p>
         </div>
-        <p className="text-sm text-gray-600">
-          {formatFileSize(storageInfo.used)} used of {formatFileSize(storageInfo.total)}
-        </p>
+        
+        <div className="space-y-2">
+          <Progress value={storageUsedPercentage} className="h-2" />
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>{formatFileSize(storageInfo.used)} used</span>
+            <span>{formatFileSize(storageInfo.total - storageInfo.used)} available</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -172,13 +185,24 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
                 <Copy className="h-4 w-4" />
               </button>
             </div>
-            <button
-              onClick={() => deleteFile(file)}
-              className="absolute right-2 top-2 hidden rounded-md p-1 text-red-500 hover:bg-red-50 group-hover:block"
-              title="Delete file"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <div className="absolute right-2 top-2 hidden space-x-1 group-hover:flex">
+              {file.type === 'css' && (
+                <button
+                  onClick={() => {/* CSS editor functionality will be added later */}}
+                  className="rounded-md p-1 text-blue-500 hover:bg-blue-50"
+                  title="Edit CSS"
+                >
+                  <Edit className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                onClick={() => deleteFile(file)}
+                className="rounded-md p-1 text-red-500 hover:bg-red-50"
+                title="Delete file"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         ))}
       </div>
