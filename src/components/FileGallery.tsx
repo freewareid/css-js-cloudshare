@@ -26,7 +26,7 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
     total: 1024 * 1024 * 1024, // 1GB in bytes
     fileCount: 0 
   });
-  const [editingFileId, setEditingFileId] = useState<string | null>(null);
+  const [editingFile, setEditingFile] = useState<{ id: string; content: string } | null>(null);
   const { toast } = useToast();
 
   const fetchFiles = async () => {
@@ -122,9 +122,13 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
     if (!file) return;
 
     try {
-      const response = await fetch(file.url);
-      const content = await response.text();
-      setEditingFileId(fileId);
+      const { data, error } = await supabase.functions.invoke('get-file-content', {
+        body: { fileId }
+      });
+
+      if (error) throw error;
+
+      setEditingFile({ id: fileId, content: data.content });
     } catch (error: any) {
       toast({
         title: "Error loading file",
@@ -157,11 +161,11 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
         ))}
       </div>
 
-      {editingFileId && (
+      {editingFile && (
         <CSSEditor
-          fileId={editingFileId}
-          initialContent=""
-          onClose={() => setEditingFileId(null)}
+          fileId={editingFile.id}
+          initialContent={editingFile.content}
+          onClose={() => setEditingFile(null)}
         />
       )}
     </div>
