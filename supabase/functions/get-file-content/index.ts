@@ -20,6 +20,8 @@ serve(async (req) => {
       throw new Error('File ID is required')
     }
 
+    console.log('Getting file details for ID:', fileId)
+
     // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -34,8 +36,11 @@ serve(async (req) => {
       .single()
 
     if (dbError || !file) {
+      console.error('Database error:', dbError)
       throw new Error('File not found')
     }
+
+    console.log('File details retrieved:', { name: file.name, type: file.type })
 
     // Initialize R2 client
     const R2 = new S3Client({
@@ -49,17 +54,34 @@ serve(async (req) => {
 
     // Get file from R2
     const key = `${file.user_id}/${file.name}`
+    console.log('Fetching file from R2:', key)
+
     const command = new GetObjectCommand({
       Bucket: "st8",
       Key: key,
     })
 
     const response = await R2.send(command)
-    const content = await response.Body?.text()
-
-    if (!content) {
-      throw new Error('Failed to read file content')
+    
+    if (!response.Body) {
+      throw new Error('No file content received from R2')
     }
+
+    // Convert the readable stream to text
+    const streamReader = response.Body.getReader()
+    const chunks = []
+    
+    while (true) {
+      const { done, value } = await streamReader.read()
+      if (done) break
+      chunks.push(value)
+    }
+
+    const content = new TextDecoder().decode(
+      new Uint8Array(chunks.reduce((acc, chunk) => [...acc, ...chunk], []))
+    )
+
+    console.log('File content retrieved successfully')
 
     return new Response(
       JSON.stringify({ content }),
