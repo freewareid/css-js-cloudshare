@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { FileCode, Trash2, Copy, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Progress } from "@/components/ui/progress";
+import { StorageUsage } from "./storage/StorageUsage";
+import { FileCard } from "./files/FileCard";
+import { CSSEditor } from "./editors/CSSEditor";
 
 type FileGalleryProps = {
   userId: string;
@@ -18,14 +19,6 @@ type File = {
   created_at: string;
 };
 
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
 export const FileGallery = ({ userId }: FileGalleryProps) => {
   const [files, setFiles] = useState<File[]>([]);
   const [storageInfo, setStorageInfo] = useState({ 
@@ -33,6 +26,7 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
     total: 1024 * 1024 * 1024, // 1GB in bytes
     fileCount: 0 
   });
+  const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchFiles = async () => {
@@ -77,7 +71,6 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
   useEffect(() => {
     fetchFiles();
 
-    // Subscribe to real-time changes
     const channel = supabase
       .channel('public:files')
       .on(
@@ -99,28 +92,15 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
     };
   }, [userId]);
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: "Copied to clipboard",
-        description: "The URL has been copied to your clipboard",
-      });
-    } catch (err) {
-      toast({
-        title: "Failed to copy",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    }
-  };
+  const deleteFile = async (fileId: string) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
 
-  const deleteFile = async (file: File) => {
     try {
       const { error: dbError } = await supabase
         .from("files")
         .delete()
-        .eq("id", file.id);
+        .eq("id", fileId);
 
       if (dbError) throw dbError;
 
@@ -137,75 +117,53 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
     }
   };
 
-  const storageUsedPercentage = (storageInfo.used / storageInfo.total) * 100;
+  const handleEdit = async (fileId: string) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    try {
+      const response = await fetch(file.url);
+      const content = await response.text();
+      setEditingFileId(fileId);
+    } catch (error: any) {
+      toast({
+        title: "Error loading file",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <div className="mb-4">
-          <h3 className="text-lg font-medium">Storage Usage</h3>
-          <p className="text-sm text-gray-500">
-            {storageInfo.fileCount} file{storageInfo.fileCount !== 1 ? 's' : ''} stored
-          </p>
-        </div>
-        
-        <div className="space-y-2">
-          <Progress value={storageUsedPercentage} className="h-2" />
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>{formatFileSize(storageInfo.used)} used</span>
-            <span>{formatFileSize(storageInfo.total - storageInfo.used)} available</span>
-          </div>
-        </div>
-      </div>
+      <StorageUsage
+        used={storageInfo.used}
+        total={storageInfo.total}
+        fileCount={storageInfo.fileCount}
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {files.map((file) => (
-          <div
+          <FileCard
             key={file.id}
-            className="group relative rounded-lg border bg-white p-4 shadow-sm transition-all hover:shadow-md"
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <FileCode className="h-5 w-5 text-primary" />
-              <span className="font-medium">{file.name}</span>
-            </div>
-            <div className="mb-2 text-sm text-gray-500">
-              {formatFileSize(file.size)}
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                readOnly
-                value={file.url}
-                className="w-full rounded-md bg-gray-50 px-3 py-1 text-sm"
-              />
-              <button
-                onClick={() => copyToClipboard(file.url)}
-                className="rounded-md p-2 hover:bg-gray-100"
-                title="Copy URL"
-              >
-                <Copy className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="absolute right-2 top-2 hidden space-x-1 group-hover:flex">
-              {file.type === 'css' && (
-                <button
-                  onClick={() => {/* CSS editor functionality will be added later */}}
-                  className="rounded-md p-1 text-blue-500 hover:bg-blue-50"
-                  title="Edit CSS"
-                >
-                  <Edit className="h-4 w-4" />
-                </button>
-              )}
-              <button
-                onClick={() => deleteFile(file)}
-                className="rounded-md p-1 text-red-500 hover:bg-red-50"
-                title="Delete file"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+            id={file.id}
+            name={file.name}
+            url={file.url}
+            size={file.size}
+            type={file.type}
+            onDelete={deleteFile}
+            onEdit={handleEdit}
+          />
         ))}
       </div>
+
+      {editingFileId && (
+        <CSSEditor
+          fileId={editingFileId}
+          initialContent=""
+          onClose={() => setEditingFileId(null)}
+        />
+      )}
     </div>
   );
 };
