@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +19,6 @@ export const CSSEditor = ({ fileId, initialContent, onClose }: CSSEditorProps) =
     try {
       setIsSaving(true);
       
-      // Update the file content in R2 storage
       const { error: uploadError } = await supabase.functions.invoke('update-css-file', {
         body: { fileId, content }
       });

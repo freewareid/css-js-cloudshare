@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { S3Client } from "https://deno.land/x/s3_lite_client@0.2.0/mod.ts";
+import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.370.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,10 +41,10 @@ serve(async (req) => {
       );
     }
 
-    // Initialize S3 client
-    const s3Client = new S3Client({
-      endPoint: 'https://e0e5e32248d2813718e01a03f06983ef.r2.cloudflarestorage.com',
-      region: 'auto',
+    // Initialize R2 client
+    const R2 = new S3Client({
+      region: "auto",
+      endpoint: `https://${Deno.env.get('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
       credentials: {
         accessKeyId: Deno.env.get('R2_ACCESS_KEY_ID') ?? '',
         secretAccessKey: Deno.env.get('R2_SECRET_ACCESS_KEY') ?? '',
@@ -52,15 +52,22 @@ serve(async (req) => {
     });
 
     // Upload updated content to R2
-    await s3Client.putObject('st8', fileData.name, content, {
-      contentType: 'text/css',
+    const key = `${fileData.user_id}/${fileData.name}`;
+    const command = new PutObjectCommand({
+      Bucket: "st8",
+      Key: key,
+      Body: content,
+      ContentType: 'text/css',
     });
+
+    await R2.send(command);
 
     return new Response(
       JSON.stringify({ message: 'File updated successfully' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error) {
+    console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to update file', details: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
