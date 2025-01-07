@@ -13,12 +13,14 @@ serve(async (req) => {
   try {
     console.log('Starting file upload process');
     
-    const formData = await req.formData();
-    const file = formData.get('file') as File;
-    const userId = formData.get('userId') as string;
+    const { fileName, fileType, userId, fileContent } = await req.json();
 
     if (!userId) {
       throw new Error('User ID is required');
+    }
+
+    if (!fileName || !fileType || !fileContent) {
+      throw new Error('Missing required file information');
     }
 
     // Get the authorization header
@@ -27,8 +29,6 @@ serve(async (req) => {
 
     console.log('Auth status:', isAnonymous ? 'anonymous' : 'authenticated');
 
-    validateFile(file);
-
     // Initialize clients
     const R2 = initializeR2Client();
     const supabase = createClient(
@@ -36,18 +36,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Process file content
-    let fileContent = await file.text();
-    if (file.name.endsWith('.css')) {
-      fileContent = compressCSS(fileContent);
+    // Process file content if it's CSS
+    let processedContent = fileContent;
+    if (fileName.endsWith('.css')) {
+      processedContent = compressCSS(fileContent);
     }
 
     // Upload to R2
-    const key = `${userId}/${file.name}`;
+    const key = `${userId}/${fileName}`;
     console.log('Attempting to upload file:', key);
     
     try {
-      const fileUrl = await uploadFileToR2(R2, key, fileContent, file.type);
+      const fileUrl = await uploadFileToR2(R2, key, processedContent, fileType);
       console.log('File uploaded successfully:', fileUrl);
 
       // Only store file metadata in database for authenticated users
@@ -56,10 +56,10 @@ serve(async (req) => {
           .from('files')
           .insert({
             user_id: userId,
-            name: file.name,
+            name: fileName,
             url: fileUrl,
-            type: file.name.split('.').pop() || '',
-            size: file.size,
+            type: fileName.split('.').pop() || '',
+            size: new TextEncoder().encode(processedContent).length,
           });
 
         if (dbError) {

@@ -76,32 +76,27 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
       try {
         setIsUploading(true);
         
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('userId', userId);
-
         // Get the current session
         const { data: { session } } = await supabase.auth.getSession();
         
-        const headers: HeadersInit = {
-          'Authorization': `Bearer ${session?.access_token || 'anonymous'}`
-        };
-
-        const response = await fetch(
-          'https://wrczdncygntrvkzjcqmj.supabase.co/functions/v1/upload-to-r2',
-          {
-            method: 'POST',
-            body: formData,
-            headers
+        // Call the Edge Function using supabase.functions.invoke
+        const { data, error } = await supabase.functions.invoke('upload-to-r2', {
+          body: {
+            fileName: file.name,
+            fileType: file.type,
+            userId: userId,
+            fileContent: await file.text(),
           }
-        );
+        });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Upload failed');
+        if (error) {
+          console.error('Upload error:', error);
+          throw error;
         }
 
-        const data = await response.json();
+        if (!data?.url) {
+          throw new Error('No URL returned from upload');
+        }
 
         toast({
           title: "File uploaded successfully",
