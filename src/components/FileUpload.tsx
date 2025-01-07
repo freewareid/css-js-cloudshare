@@ -80,20 +80,25 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
         formData.append('file', file);
         formData.append('userId', userId);
 
+        // Get the current session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const headers: HeadersInit = {
+          'Authorization': `Bearer ${session?.access_token || 'anonymous'}`
+        };
+
         const response = await fetch(
           'https://wrczdncygntrvkzjcqmj.supabase.co/functions/v1/upload-to-r2',
           {
             method: 'POST',
             body: formData,
-            headers: {
-              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-            }
+            headers
           }
         );
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error || 'Upload failed');
+          throw new Error(error.message || 'Upload failed');
         }
 
         const data = await response.json();
@@ -103,9 +108,10 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
           description: file.name,
         });
       } catch (error: any) {
+        console.error('Upload error:', error);
         toast({
           title: "Upload failed",
-          description: error.message,
+          description: error.message || "An unexpected error occurred",
           variant: "destructive",
         });
       } finally {

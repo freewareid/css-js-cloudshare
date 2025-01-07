@@ -21,6 +21,12 @@ serve(async (req) => {
       throw new Error('User ID is required');
     }
 
+    // Get the authorization header
+    const authHeader = req.headers.get('authorization');
+    const isAnonymous = !authHeader || authHeader === 'Bearer anonymous';
+
+    console.log('Auth status:', isAnonymous ? 'anonymous' : 'authenticated');
+
     validateFile(file);
 
     // Initialize clients
@@ -44,19 +50,22 @@ serve(async (req) => {
       const fileUrl = await uploadFileToR2(R2, key, fileContent, file.type);
       console.log('File uploaded successfully:', fileUrl);
 
-      // Update database records
-      const { error: dbError } = await supabase
-        .from('files')
-        .insert({
-          user_id: userId,
-          name: file.name,
-          url: fileUrl,
-          type: file.name.split('.').pop() || '',
-          size: file.size,
-        });
+      // Only store file metadata in database for authenticated users
+      if (!isAnonymous) {
+        const { error: dbError } = await supabase
+          .from('files')
+          .insert({
+            user_id: userId,
+            name: file.name,
+            url: fileUrl,
+            type: file.name.split('.').pop() || '',
+            size: file.size,
+          });
 
-      if (dbError) {
-        throw new Error(`Failed to save file metadata: ${dbError.message}`);
+        if (dbError) {
+          console.error('Database error:', dbError);
+          throw new Error(`Failed to save file metadata: ${dbError.message}`);
+        }
       }
 
       return new Response(
