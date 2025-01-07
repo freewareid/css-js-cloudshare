@@ -37,10 +37,10 @@ serve(async (req) => {
 
     if (dbError || !file) {
       console.error('Database error:', dbError)
-      throw new Error('File not found')
+      throw new Error('File not found in database')
     }
 
-    console.log('File details retrieved:', { name: file.name, type: file.type })
+    console.log('File details retrieved:', { name: file.name, type: file.type, user_id: file.user_id })
 
     // Initialize R2 client
     const R2 = new S3Client({
@@ -54,39 +54,44 @@ serve(async (req) => {
 
     // Get file from R2
     const key = `${file.user_id}/${file.name}`
-    console.log('Fetching file from R2:', key)
+    console.log('Fetching file from R2 with key:', key)
 
     const command = new GetObjectCommand({
       Bucket: "st8",
       Key: key,
     })
 
-    const response = await R2.send(command)
-    
-    if (!response.Body) {
-      throw new Error('No file content received from R2')
+    try {
+      const response = await R2.send(command)
+      
+      if (!response.Body) {
+        throw new Error('No file content received from R2')
+      }
+
+      // Convert the readable stream to text
+      const streamReader = response.Body.getReader()
+      const chunks = []
+      
+      while (true) {
+        const { done, value } = await streamReader.read()
+        if (done) break
+        chunks.push(value)
+      }
+
+      const content = new TextDecoder().decode(
+        new Uint8Array(chunks.reduce((acc, chunk) => [...acc, ...chunk], []))
+      )
+
+      console.log('File content retrieved successfully')
+
+      return new Response(
+        JSON.stringify({ content }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } catch (r2Error) {
+      console.error('R2 error:', r2Error)
+      throw new Error(`Failed to fetch file from R2: ${r2Error.message}`)
     }
-
-    // Convert the readable stream to text
-    const streamReader = response.Body.getReader()
-    const chunks = []
-    
-    while (true) {
-      const { done, value } = await streamReader.read()
-      if (done) break
-      chunks.push(value)
-    }
-
-    const content = new TextDecoder().decode(
-      new Uint8Array(chunks.reduce((acc, chunk) => [...acc, ...chunk], []))
-    )
-
-    console.log('File content retrieved successfully')
-
-    return new Response(
-      JSON.stringify({ content }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
   } catch (error) {
     console.error('Error:', error)
     return new Response(
