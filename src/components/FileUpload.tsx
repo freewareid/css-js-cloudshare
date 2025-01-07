@@ -13,8 +13,9 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
   const { toast } = useToast();
 
   const validateFileName = (name: string) => {
-    const regex = /^[a-zA-Z0-9]{1,255}\.(css|js)$/;
-    return regex.test(name);
+    // Allow any characters in the filename, just check the extension
+    const extension = name.split('.').pop()?.toLowerCase();
+    return extension === 'css' || extension === 'js';
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -66,8 +67,7 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
       if (!validateFileName(file.name)) {
         toast({
           title: "Invalid filename",
-          description:
-            "Filename must contain only letters and numbers and have a .css or .js extension",
+          description: "File must have a .css or .js extension",
           variant: "destructive",
         });
         continue;

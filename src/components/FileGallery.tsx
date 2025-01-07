@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { StorageUsage } from "./storage/StorageUsage";
-import { FileCard } from "./files/FileCard";
+import { FileList } from "./files/FileList";
 import { CSSEditor } from "./editors/CSSEditor";
-import { Loader2 } from "lucide-react";
+import { EditorLoader } from "./editors/EditorLoader";
 
 type FileGalleryProps = {
   userId: string;
@@ -24,7 +24,7 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
   const [files, setFiles] = useState<File[]>([]);
   const [storageInfo, setStorageInfo] = useState({ 
     used: 0, 
-    total: 1024 * 1024 * 1024, // 1GB in bytes
+    total: 1024 * 1024 * 1024,
     fileCount: 0 
   });
   const [editingFile, setEditingFile] = useState<{ id: string; content: string } | null>(null);
@@ -111,7 +111,6 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
         description: file.name,
       });
       
-      // Refresh files after deletion
       fetchFiles();
     } catch (error: any) {
       toast({
@@ -155,29 +154,13 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
         fileCount={storageInfo.fileCount}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {files.map((file) => (
-          <FileCard
-            key={file.id}
-            id={file.id}
-            name={file.name}
-            url={file.url}
-            size={file.size}
-            type={file.type}
-            onDelete={deleteFile}
-            onEdit={handleEdit}
-          />
-        ))}
-      </div>
+      <FileList
+        files={files}
+        onDelete={deleteFile}
+        onEdit={handleEdit}
+      />
 
-      {isLoadingEditor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="rounded-lg bg-white p-6">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="mt-2 text-sm text-gray-600">Loading editor...</p>
-          </div>
-        </div>
-      )}
+      {isLoadingEditor && <EditorLoader />}
 
       {editingFile && !isLoadingEditor && (
         <CSSEditor
