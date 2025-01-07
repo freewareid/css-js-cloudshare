@@ -12,8 +12,7 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
-  const validateFileName = (name: string) => {
-    // Allow any characters in the filename, just check the extension
+  const validateFileExtension = (name: string) => {
     const extension = name.split('.').pop()?.toLowerCase();
     return extension === 'css' || extension === 'js';
   };
@@ -40,10 +39,7 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
   };
 
   const handleFiles = async (files: File[]) => {
-    const validFiles = files.filter((file) => {
-      const extension = file.name.split(".").pop()?.toLowerCase();
-      return ["css", "js"].includes(extension || "");
-    });
+    const validFiles = files.filter(file => validateFileExtension(file.name));
 
     if (validFiles.length === 0) {
       toast({
@@ -59,15 +55,6 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
         toast({
           title: "File too large",
           description: "Maximum file size is 1MB",
-          variant: "destructive",
-        });
-        continue;
-      }
-
-      if (!validateFileName(file.name)) {
-        toast({
-          title: "Invalid filename",
-          description: "File must have a .css or .js extension",
           variant: "destructive",
         });
         continue;
@@ -99,7 +86,7 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
           description: file.name,
         });
 
-        // Trigger a refresh of the files list by dispatching a custom event
+        // Trigger a refresh of the files list
         window.dispatchEvent(new CustomEvent('fileUploaded'));
       } catch (error: any) {
         console.error('Upload error:', error);
