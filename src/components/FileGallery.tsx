@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { StorageUsage } from "./storage/StorageUsage";
 import { FileCard } from "./files/FileCard";
 import { CSSEditor } from "./editors/CSSEditor";
+import { Loader2 } from "lucide-react";
 
 type FileGalleryProps = {
   userId: string;
@@ -27,6 +28,7 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
     fileCount: 0 
   });
   const [editingFile, setEditingFile] = useState<{ id: string; content: string } | null>(null);
+  const [isLoadingEditor, setIsLoadingEditor] = useState(false);
   const { toast } = useToast();
 
   const fetchFiles = async () => {
@@ -108,6 +110,9 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
         title: "File deleted",
         description: file.name,
       });
+      
+      // Refresh files after deletion
+      fetchFiles();
     } catch (error: any) {
       toast({
         title: "Error deleting file",
@@ -120,6 +125,8 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
   const handleEdit = async (fileId: string) => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
+
+    setIsLoadingEditor(true);
 
     try {
       const { data, error } = await supabase.functions.invoke('get-file-content', {
@@ -135,6 +142,8 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsLoadingEditor(false);
     }
   };
 
@@ -161,7 +170,16 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
         ))}
       </div>
 
-      {editingFile && (
+      {isLoadingEditor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="rounded-lg bg-white p-6">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="mt-2 text-sm text-gray-600">Loading editor...</p>
+          </div>
+        </div>
+      )}
+
+      {editingFile && !isLoadingEditor && (
         <CSSEditor
           fileId={editingFile.id}
           initialContent={editingFile.content}

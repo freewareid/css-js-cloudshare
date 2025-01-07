@@ -76,10 +76,6 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
       try {
         setIsUploading(true);
         
-        // Get the current session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        // Call the Edge Function using supabase.functions.invoke
         const { data, error } = await supabase.functions.invoke('upload-to-r2', {
           body: {
             fileName: file.name,
@@ -102,6 +98,9 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
           title: "File uploaded successfully",
           description: file.name,
         });
+
+        // Trigger a refresh of the files list by dispatching a custom event
+        window.dispatchEvent(new CustomEvent('fileUploaded'));
       } catch (error: any) {
         console.error('Upload error:', error);
         toast({
