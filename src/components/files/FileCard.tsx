@@ -22,8 +22,8 @@ const formatFileSize = (bytes: number) => {
 export const FileCard = ({ id, name, url, size, type, onDelete, onEdit }: FileCardProps) => {
   const { toast } = useToast();
   
-  // Transform r2.dev URL to cdn.000.web.id
-  const publicUrl = url.replace('r2.dev', 'cdn.000.web.id');
+  // Transform URL to cdn.000.web.id without the prefix
+  const publicUrl = url.replace('pub-c7fe5d7345b64a8aa90756d140154223.r2.dev', 'cdn.000.web.id');
 
   const copyToClipboard = async (text: string) => {
     try {

@@ -30,8 +30,13 @@ serve(async (req) => {
       },
     })
 
+    // Generate a 12-character alphanumeric folder name from userId
+    const folderName = userId === '00000000-0000-0000-0000-000000000000' 
+      ? 'anonymous'
+      : userId.replace(/-/g, '').substring(0, 12);
+
     // Generate file path
-    const key = `${userId}/${fileName}`
+    const key = `${folderName}/${fileName}`
     console.log('Uploading to R2 with key:', key)
 
     // Upload to R2
@@ -51,7 +56,7 @@ serve(async (req) => {
     }
 
     // Get the public URL
-    const publicUrl = `https://pub-c7fe5d7345b64a8aa90756d140154223.r2.dev/${key}`
+    const publicUrl = `https://cdn.000.web.id/${key}`
 
     // Initialize Supabase client
     const supabase = createClient(
