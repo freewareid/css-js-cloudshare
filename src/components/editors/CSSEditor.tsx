@@ -57,11 +57,13 @@ export const CSSEditor = ({ fileId, initialContent, onClose }: CSSEditorProps) =
       <div className="w-full max-w-3xl rounded-lg bg-white p-6">
         <h2 className="mb-4 text-xl font-semibold">Edit CSS File</h2>
         <div className="mb-4">
-          <SimpleMDE
-            value={content}
-            onChange={setContent}
-            options={editorOptions}
-          />
+          <div className="max-w-[720px] mx-auto">
+            <SimpleMDE
+              value={content}
+              onChange={setContent}
+              options={editorOptions}
+            />
+          </div>
         </div>
         <div className="flex justify-end gap-2">
           <Button

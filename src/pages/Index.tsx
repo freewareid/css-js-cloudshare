@@ -1,8 +1,35 @@
+import { useState, useEffect } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { FileList } from "@/components/files/FileList";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const [files, setFiles] = useState([]);
+
+  const fetchAnonymousFiles = async () => {
+    const { data, error } = await supabase
+      .from('files')
+      .select('*')
+      .eq('user_id', '00000000-0000-0000-0000-000000000000')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setFiles(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnonymousFiles();
+
+    // Listen for file upload events
+    window.addEventListener('fileUploaded', fetchAnonymousFiles);
+    return () => {
+      window.removeEventListener('fileUploaded', fetchAnonymousFiles);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <header className="bg-white/80 backdrop-blur-sm fixed w-full z-10 shadow-sm">
@@ -38,9 +65,20 @@ const Index = () => {
           </div>
         </section>
 
-        <section className="max-w-2xl mx-auto">
+        <section className="max-w-2xl mx-auto mb-12">
           <FileUpload userId="anonymous" />
         </section>
+
+        {files.length > 0 && (
+          <section className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Recent Uploads</h2>
+            <FileList 
+              files={files} 
+              onDelete={() => {}} 
+              onEdit={() => {}} 
+            />
+          </section>
+        )}
       </main>
     </div>
   );
