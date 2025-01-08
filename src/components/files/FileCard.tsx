@@ -1,4 +1,4 @@
-import { FileCode, Trash2, Copy, Edit } from "lucide-react";
+import { FileCode, Trash2, Copy, Edit, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type FileCardProps = {
@@ -21,6 +21,9 @@ const formatFileSize = (bytes: number) => {
 
 export const FileCard = ({ id, name, url, size, type, onDelete, onEdit }: FileCardProps) => {
   const { toast } = useToast();
+  
+  // Transform r2.dev URL to cdn.000.web.id
+  const publicUrl = url.replace('r2.dev', 'cdn.000.web.id');
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -38,6 +41,10 @@ export const FileCard = ({ id, name, url, size, type, onDelete, onEdit }: FileCa
     }
   };
 
+  const openInNewTab = () => {
+    window.open(publicUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="group relative rounded-lg border bg-white p-4 shadow-sm transition-all hover:shadow-md">
       <div className="mb-2 flex items-center gap-2">
@@ -50,15 +57,22 @@ export const FileCard = ({ id, name, url, size, type, onDelete, onEdit }: FileCa
       <div className="flex items-center gap-2">
         <input
           readOnly
-          value={url}
+          value={publicUrl}
           className="w-full rounded-md bg-gray-50 px-3 py-1 text-sm"
         />
         <button
-          onClick={() => copyToClipboard(url)}
+          onClick={() => copyToClipboard(publicUrl)}
           className="rounded-md p-2 hover:bg-gray-100"
           title="Copy URL"
         >
           <Copy className="h-4 w-4" />
+        </button>
+        <button
+          onClick={openInNewTab}
+          className="rounded-md p-2 hover:bg-gray-100"
+          title="Open in new tab"
+        >
+          <ExternalLink className="h-4 w-4" />
         </button>
       </div>
       <div className="absolute right-2 top-2 hidden space-x-1 group-hover:flex">

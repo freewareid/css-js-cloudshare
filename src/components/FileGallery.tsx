@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { StorageUsage } from "./storage/StorageUsage";
 import { FileList } from "./files/FileList";
 import { CSSEditor } from "./editors/CSSEditor";
 import { EditorLoader } from "./editors/EditorLoader";
@@ -22,11 +21,6 @@ type File = {
 
 export const FileGallery = ({ userId }: FileGalleryProps) => {
   const [files, setFiles] = useState<File[]>([]);
-  const [storageInfo, setStorageInfo] = useState({ 
-    used: 0, 
-    total: 1024 * 1024 * 1024,
-    fileCount: 0 
-  });
   const [editingFile, setEditingFile] = useState<{ id: string; content: string } | null>(null);
   const [isLoadingEditor, setIsLoadingEditor] = useState(false);
   const { toast } = useToast();
@@ -47,27 +41,7 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
       return;
     }
 
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("storage_used")
-      .eq("id", userId)
-      .single();
-
-    if (profileError) {
-      toast({
-        title: "Error fetching storage info",
-        description: profileError.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
     setFiles(filesData as File[]);
-    setStorageInfo(prev => ({ 
-      ...prev, 
-      used: profileData.storage_used,
-      fileCount: filesData?.length || 0
-    }));
   };
 
   useEffect(() => {
@@ -148,12 +122,6 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
 
   return (
     <div className="space-y-6">
-      <StorageUsage
-        used={storageInfo.used}
-        total={storageInfo.total}
-        fileCount={storageInfo.fileCount}
-      />
-
       <FileList
         files={files}
         onDelete={deleteFile}
