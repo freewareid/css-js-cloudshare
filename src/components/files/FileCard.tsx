@@ -1,4 +1,4 @@
-import { FileCode, Trash2, Copy, Edit, ExternalLink } from "lucide-react";
+import { FileCode, Trash2, Copy, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type FileCardProps = {
@@ -76,15 +76,6 @@ export const FileCard = ({ id, name, url, size, type, onDelete, onEdit }: FileCa
         </button>
       </div>
       <div className="absolute right-2 top-2 hidden space-x-1 group-hover:flex">
-        {type === 'css' && (
-          <button
-            onClick={() => onEdit(id)}
-            className="rounded-md p-1 text-blue-500 hover:bg-blue-50"
-            title="Edit CSS"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
-        )}
         <button
           onClick={() => onDelete(id)}
           className="rounded-md p-1 text-red-500 hover:bg-red-50"

@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FileList } from "@/components/files/FileList";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [files, setFiles] = useState([]);
+  const [session, setSession] = useState(null);
+  const navigate = useNavigate();
 
   const fetchAnonymousFiles = async () => {
     const { data, error } = await supabase
@@ -21,9 +23,22 @@ const Index = () => {
   };
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
     fetchAnonymousFiles();
 
-    // Listen for file upload events
     window.addEventListener('fileUploaded', fetchAnonymousFiles);
     return () => {
       window.removeEventListener('fileUploaded', fetchAnonymousFiles);
@@ -35,9 +50,23 @@ const Index = () => {
       <header className="bg-white/80 backdrop-blur-sm fixed w-full z-10 shadow-sm">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <h1 className="text-xl font-bold text-gray-900">CSS Host</h1>
-          <Button asChild>
-            <Link to="/login">Sign In</Link>
-          </Button>
+          {session ? (
+            <div className="space-x-4">
+              <Button asChild variant="outline">
+                <Link to="/dashboard">Go to Dashboard</Link>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => supabase.auth.signOut()}
+              >
+                Sign Out
+              </Button>
+            </div>
+          ) : (
+            <Button asChild>
+              <Link to="/login">Sign In</Link>
+            </Button>
+          )}
         </div>
       </header>
 
@@ -66,7 +95,7 @@ const Index = () => {
         </section>
 
         <section className="max-w-2xl mx-auto mb-12">
-          <FileUpload userId="anonymous" />
+          <FileUpload userId="00000000-0000-0000-0000-000000000000" />
         </section>
 
         {files.length > 0 && (

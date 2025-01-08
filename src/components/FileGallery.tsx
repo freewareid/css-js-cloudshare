@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileList } from "./files/FileList";
-import { CSSEditor } from "./editors/CSSEditor";
-import { EditorLoader } from "./editors/EditorLoader";
 
 type FileGalleryProps = {
   userId: string;
@@ -21,8 +19,6 @@ type File = {
 
 export const FileGallery = ({ userId }: FileGalleryProps) => {
   const [files, setFiles] = useState<File[]>([]);
-  const [editingFile, setEditingFile] = useState<{ id: string; content: string } | null>(null);
-  const [isLoadingEditor, setIsLoadingEditor] = useState(false);
   const { toast } = useToast();
 
   const fetchFiles = async () => {
@@ -95,48 +91,13 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
     }
   };
 
-  const handleEdit = async (fileId: string) => {
-    const file = files.find(f => f.id === fileId);
-    if (!file) return;
-
-    setIsLoadingEditor(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('get-file-content', {
-        body: { fileId }
-      });
-
-      if (error) throw error;
-
-      setEditingFile({ id: fileId, content: data.content });
-    } catch (error: any) {
-      toast({
-        title: "Error loading file",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingEditor(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <FileList
         files={files}
         onDelete={deleteFile}
-        onEdit={handleEdit}
+        onEdit={() => {}}
       />
-
-      {isLoadingEditor && <EditorLoader />}
-
-      {editingFile && !isLoadingEditor && (
-        <CSSEditor
-          fileId={editingFile.id}
-          initialContent={editingFile.content}
-          onClose={() => setEditingFile(null)}
-        />
-      )}
     </div>
   );
 };
