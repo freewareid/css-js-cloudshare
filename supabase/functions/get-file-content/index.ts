@@ -8,7 +8,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -22,13 +21,11 @@ serve(async (req) => {
 
     console.log('Getting file details for ID:', fileId)
 
-    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get file details from database
     const { data: file, error: dbError } = await supabase
       .from('files')
       .select('*')
@@ -42,7 +39,12 @@ serve(async (req) => {
 
     console.log('File details retrieved:', { name: file.name, type: file.type, user_id: file.user_id })
 
-    // Initialize R2 client
+    // Get the folder name (12 chars from user ID)
+    const folderName = file.user_id.replace(/-/g, '').substring(0, 12)
+    const key = `${folderName}/${file.name}`
+    
+    console.log('Fetching file from R2 with key:', key)
+
     const R2 = new S3Client({
       region: "auto",
       endpoint: `https://${Deno.env.get('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
@@ -51,10 +53,6 @@ serve(async (req) => {
         secretAccessKey: Deno.env.get('R2_SECRET_ACCESS_KEY') ?? '',
       },
     })
-
-    // Get file from R2
-    const key = `${file.user_id}/${file.name}`
-    console.log('Fetching file from R2 with key:', key)
 
     const command = new GetObjectCommand({
       Bucket: "st8",
@@ -68,7 +66,6 @@ serve(async (req) => {
         throw new Error('No file content received from R2')
       }
 
-      // Convert the readable stream to text
       const streamReader = response.Body.getReader()
       const chunks = []
       
