@@ -104,7 +104,6 @@ const Index = () => {
             <FileList 
               files={files} 
               onDelete={() => {}} 
-              onEdit={() => {}} 
             />
           </section>
         )}
