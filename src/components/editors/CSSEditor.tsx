@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import SimpleMDE from "react-simplemde-editor";
-import "easymde/dist/easymde.min.css";
+import { Textarea } from "@/components/ui/textarea";
 
 type CSSEditorProps = {
   fileId: string;
@@ -43,28 +42,15 @@ export const CSSEditor = ({ fileId, initialContent, onClose }: CSSEditorProps) =
     }
   };
 
-  const editorOptions = {
-    lineWrapping: false,
-    mode: "css",
-    toolbar: false,
-    status: false,
-    spellChecker: false,
-    minHeight: "60vh",
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-3xl rounded-lg bg-white p-6">
-        <h2 className="mb-4 text-xl font-semibold">Edit CSS File</h2>
-        <div className="mb-4">
-          <div className="max-w-[720px] mx-auto">
-            <SimpleMDE
-              value={content}
-              onChange={setContent}
-              options={editorOptions}
-            />
-          </div>
-        </div>
+    <div className="w-full max-w-3xl mx-auto">
+      <div className="space-y-4">
+        <Textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          className="min-h-[60vh] font-mono text-sm"
+          placeholder="Enter your CSS code here..."
+        />
         <div className="flex justify-end gap-2">
           <Button
             variant="outline"

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FileEditor } from "@/components/editors/FileEditor";
+import { CSSEditor } from "@/components/editors/CSSEditor";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,11 +98,10 @@ const EditCSS = () => {
 
       <ScrollArea className="flex-1 h-[calc(100vh-4rem)]">
         <main className="max-w-5xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-lg shadow">
-            <FileEditor
+          <div className="bg-white rounded-lg shadow p-6">
+            <CSSEditor
               fileId={fileId!}
               initialContent={fileContent}
-              fileType="css"
               onClose={handleClose}
             />
           </div>
