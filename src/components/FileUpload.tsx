@@ -5,9 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 type FileUploadProps = {
   userId: string;
+  onUploadSuccess?: () => void;
 };
 
-export const FileUpload = ({ userId }: FileUploadProps) => {
+export const FileUpload = ({ userId, onUploadSuccess }: FileUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
@@ -86,8 +87,9 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
           description: file.name,
         });
 
-        // Trigger a refresh of the files list
-        window.dispatchEvent(new CustomEvent('fileUploaded'));
+        if (onUploadSuccess) {
+          onUploadSuccess();
+        }
       } catch (error: any) {
         console.error('Upload error:', error);
         toast({
@@ -103,21 +105,21 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
 
   return (
     <div
-      className={`relative h-64 rounded-lg border-2 border-dashed p-8 transition-colors ${
+      className={`relative h-48 rounded-lg border-2 border-dashed p-6 transition-colors ${
         isDragging ? "border-primary bg-primary/10" : "border-gray-300"
       }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="flex h-full flex-col items-center justify-center gap-4">
-        <Upload className="h-12 w-12 text-gray-400" />
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <Upload className="h-8 w-8 text-gray-400" />
         <div className="text-center">
-          <p className="text-lg font-medium">
+          <p className="text-sm font-medium">
             {isUploading ? "Uploading..." : "Drag and drop your files here"}
           </p>
-          <p className="text-sm text-gray-500">or</p>
-          <label className="mt-2 inline-block cursor-pointer rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
+          <p className="text-xs text-gray-500 mt-1">or</p>
+          <label className="mt-2 inline-block cursor-pointer rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90">
             Browse Files
             <input
               type="file"
@@ -129,7 +131,7 @@ export const FileUpload = ({ userId }: FileUploadProps) => {
             />
           </label>
         </div>
-        <p className="text-sm text-gray-500">
+        <p className="text-xs text-gray-500">
           Maximum file size: 1MB. Only CSS and JS files are allowed.
         </p>
       </div>

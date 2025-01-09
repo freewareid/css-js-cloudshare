@@ -1,5 +1,6 @@
 import { FileCode, Trash2, Copy, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 type FileCardProps = {
   id: string;
@@ -19,10 +20,9 @@ const formatFileSize = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-export const FileCard = ({ id, name, url, size, type, onDelete, onEdit }: FileCardProps) => {
+export const FileCard = ({ id, name, url, size, type, onDelete }: FileCardProps) => {
   const { toast } = useToast();
   
-  // Transform URL to cdn.000.web.id without the prefix
   const publicUrl = url.replace('pub-c7fe5d7345b64a8aa90756d140154223.r2.dev', 'cdn.000.web.id');
 
   const copyToClipboard = async (text: string) => {
@@ -46,44 +46,52 @@ export const FileCard = ({ id, name, url, size, type, onDelete, onEdit }: FileCa
   };
 
   return (
-    <div className="group relative rounded-lg border bg-white p-4 shadow-sm transition-all hover:shadow-md">
-      <div className="mb-2 flex items-center gap-2">
-        <FileCode className="h-5 w-5 text-primary" />
-        <span className="font-medium">{name}</span>
+    <div className="group relative flex items-center justify-between rounded-lg border bg-white p-4 shadow-sm transition-all hover:shadow-md">
+      <div className="flex items-center gap-4 flex-1">
+        <FileCode className="h-5 w-5 text-primary shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-medium truncate">{name}</span>
+            <span className="text-xs text-gray-500">
+              {formatFileSize(size)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              readOnly
+              value={publicUrl}
+              className="flex-1 truncate rounded-md bg-gray-50 px-2 py-1 text-sm"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => copyToClipboard(publicUrl)}
+              title="Copy URL"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={openInNewTab}
+              title="Open in new tab"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
-      <div className="mb-2 text-sm text-gray-500">
-        {formatFileSize(size)}
-      </div>
-      <div className="flex items-center gap-2">
-        <input
-          readOnly
-          value={publicUrl}
-          className="w-full rounded-md bg-gray-50 px-3 py-1 text-sm"
-        />
-        <button
-          onClick={() => copyToClipboard(publicUrl)}
-          className="rounded-md p-2 hover:bg-gray-100"
-          title="Copy URL"
-        >
-          <Copy className="h-4 w-4" />
-        </button>
-        <button
-          onClick={openInNewTab}
-          className="rounded-md p-2 hover:bg-gray-100"
-          title="Open in new tab"
-        >
-          <ExternalLink className="h-4 w-4" />
-        </button>
-      </div>
-      <div className="absolute right-2 top-2 hidden space-x-1 group-hover:flex">
-        <button
-          onClick={() => onDelete(id)}
-          className="rounded-md p-1 text-red-500 hover:bg-red-50"
-          title="Delete file"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+        onClick={() => onDelete(id)}
+        title="Delete file"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
     </div>
   );
 };

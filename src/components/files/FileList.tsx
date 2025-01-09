@@ -18,7 +18,7 @@ type FileListProps = {
 
 export const FileList = ({ files, onDelete, onEdit }: FileListProps) => {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-2">
       {files.map((file) => (
         <FileCard
           key={file.id}

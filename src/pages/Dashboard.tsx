@@ -11,6 +11,11 @@ const Dashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [session, setSession] = useState(null);
+  const [key, setKey] = useState(0); // Add this for forcing re-render
+
+  const handleUploadSuccess = () => {
+    setKey(prev => prev + 1); // This will force a re-render of FileGallery
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,31 +44,37 @@ const Dashboard = () => {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <h1 className="text-xl font-bold text-gray-900">CSS Host</h1>
-          <Button variant="ghost" onClick={() => supabase.auth.signOut()}>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b">
+        <div className="max-w-5xl mx-auto flex h-16 items-center justify-between px-4">
+          <h1 className="text-xl font-semibold text-gray-900">CSS Host</h1>
+          <Button variant="ghost" size="sm" onClick={() => supabase.auth.signOut()}>
             <LogOut className="mr-2 h-4 w-4" />
             Sign Out
           </Button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid gap-8">
-          <section className="animate-fadeIn">
-            <h2 className="mb-4 text-xl font-semibold text-gray-900">
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        <div className="space-y-8">
+          <section>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">
               Upload Files
             </h2>
-            <FileUpload userId={session.user.id} />
+            <FileUpload 
+              userId={session.user.id} 
+              onUploadSuccess={handleUploadSuccess}
+            />
           </section>
 
-          <section className="animate-fadeIn">
-            <h2 className="mb-4 text-xl font-semibold text-gray-900">
+          <section>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">
               Your Files
             </h2>
-            <FileGallery userId={session.user.id} />
+            <FileGallery 
+              key={key} 
+              userId={session.user.id} 
+            />
           </section>
         </div>
       </main>
