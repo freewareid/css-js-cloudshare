@@ -96,7 +96,6 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
       <FileList
         files={files}
         onDelete={deleteFile}
-        onEdit={() => {}}
       />
     </div>
   );

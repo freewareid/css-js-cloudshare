@@ -13,10 +13,9 @@ type File = {
 type FileListProps = {
   files: File[];
   onDelete: (id: string) => void;
-  onEdit: (id: string) => void;
 };
 
-export const FileList = ({ files, onDelete, onEdit }: FileListProps) => {
+export const FileList = ({ files, onDelete }: FileListProps) => {
   return (
     <div className="space-y-2">
       {files.map((file) => (
@@ -28,7 +27,6 @@ export const FileList = ({ files, onDelete, onEdit }: FileListProps) => {
           size={file.size}
           type={file.type}
           onDelete={onDelete}
-          onEdit={onEdit}
         />
       ))}
     </div>
