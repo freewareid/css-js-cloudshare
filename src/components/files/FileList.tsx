@@ -1,32 +1,34 @@
 import { FileCard } from "./FileCard";
 
-type File = {
-  id: string;
-  user_id: string;
-  name: string;
-  url: string;
-  type: "css" | "js";
-  size: number;
-  created_at: string;
-};
-
-type FileListProps = {
-  files: File[];
+export type FileListProps = {
+  files: {
+    id: string;
+    name: string;
+    url: string;
+    size: number;
+    type: "css" | "js";
+  }[];
   onDelete: (id: string) => void;
+  onEdit?: (id: string) => void;
 };
 
-export const FileList = ({ files, onDelete }: FileListProps) => {
+export const FileList = ({ files, onDelete, onEdit }: FileListProps) => {
+  if (files.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No files uploaded yet
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {files.map((file) => (
         <FileCard
           key={file.id}
-          id={file.id}
-          name={file.name}
-          url={file.url}
-          size={file.size}
-          type={file.type}
+          {...file}
           onDelete={onDelete}
+          onEdit={onEdit}
         />
       ))}
     </div>
