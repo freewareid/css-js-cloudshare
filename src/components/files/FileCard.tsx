@@ -2,8 +2,6 @@ import { useState } from "react";
 import { FileCode, Trash2, Copy, ExternalLink, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { FileEditor } from "../editors/FileEditor";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 type FileCardProps = {
@@ -89,16 +87,18 @@ export const FileCard = ({ id, name, url, size, type, onDelete }: FileCardProps)
             >
               <ExternalLink className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleEdit}
-              disabled={isLoading}
-              title="Edit file"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
+            {type === "css" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleEdit}
+                disabled={isLoading}
+                title="Edit file"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

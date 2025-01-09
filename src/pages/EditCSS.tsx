@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const EditCSS = () => {
   const { fileId } = useParams();
@@ -78,7 +79,7 @@ const EditCSS = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
+      <header className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-5xl mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">
             <Button
@@ -95,16 +96,18 @@ const EditCSS = () => {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow">
-          <FileEditor
-            fileId={fileId!}
-            initialContent={fileContent}
-            fileType="css"
-            onClose={handleClose}
-          />
-        </div>
-      </main>
+      <ScrollArea className="flex-1 h-[calc(100vh-4rem)]">
+        <main className="max-w-5xl mx-auto px-4 py-8">
+          <div className="bg-white rounded-lg shadow">
+            <FileEditor
+              fileId={fileId!}
+              initialContent={fileContent}
+              fileType="css"
+              onClose={handleClose}
+            />
+          </div>
+        </main>
+      </ScrollArea>
     </div>
   );
 };

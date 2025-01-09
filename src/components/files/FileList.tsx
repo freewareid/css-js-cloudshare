@@ -9,10 +9,9 @@ export type FileListProps = {
     type: "css" | "js";
   }[];
   onDelete: (id: string) => void;
-  onEdit?: (id: string) => void;
 };
 
-export const FileList = ({ files, onDelete, onEdit }: FileListProps) => {
+export const FileList = ({ files, onDelete }: FileListProps) => {
   if (files.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -28,7 +27,6 @@ export const FileList = ({ files, onDelete, onEdit }: FileListProps) => {
           key={file.id}
           {...file}
           onDelete={onDelete}
-          onEdit={onEdit}
         />
       ))}
     </div>
