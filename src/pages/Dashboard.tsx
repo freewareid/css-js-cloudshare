@@ -22,13 +22,23 @@ const Dashboard = () => {
   const handleSignOut = async () => {
     try {
       setIsLoading(true);
+      
+      // First check if we have a current session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        // If no session, just navigate away
+        navigate('/');
+        return;
+      }
+
+      // Proceed with sign out
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error("Error signing out:", error.message);
         toast({
           variant: "destructive",
           title: "Error signing out",
-          description: "Please try again later",
+          description: error.message,
         });
       } else {
         navigate('/');
@@ -49,26 +59,36 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Check current session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      if (!currentSession) {
+    const checkSession = async () => {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession && mounted) {
         navigate('/login');
         return;
       }
-      setSession(currentSession);
-    });
+      if (mounted) {
+        setSession(currentSession);
+      }
+    };
+
+    checkSession();
 
     // Listen for auth state changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      if (!newSession) {
-        navigate('/');
+      if (mounted) {
+        setSession(newSession);
+        if (!newSession) {
+          navigate('/');
+        }
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [navigate]);
