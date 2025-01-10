@@ -12,7 +12,7 @@ const Login = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate('/dashboard');
+        checkUserRole(session.user.id);
       }
     });
 
@@ -20,7 +20,7 @@ const Login = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        navigate('/dashboard');
+        checkUserRole(session.user.id);
       }
       if (_event === 'SIGNED_IN') {
         toast({
@@ -32,6 +32,20 @@ const Login = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate, toast]);
+
+  const checkUserRole = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (profile?.role === 'superadmin') {
+      navigate('/admin');
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
