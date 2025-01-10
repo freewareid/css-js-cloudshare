@@ -20,28 +20,52 @@ const Dashboard = () => {
   };
 
   const handleSignOut = async () => {
+    if (isLoading) return;
+
     try {
       setIsLoading(true);
       
-      // First check if we have a current session
+      // Get current session
       const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
       if (!currentSession) {
-        // If no session, just navigate away
-        navigate('/');
+        // If no active session, clear local state and redirect
+        setSession(null);
+        navigate('/login');
+        toast({
+          title: "Session expired",
+          description: "Please log in again",
+        });
         return;
       }
 
-      // Proceed with sign out
-      const { error } = await supabase.auth.signOut();
+      // Attempt to sign out
+      const { error } = await supabase.auth.signOut({
+        scope: 'local' // Use local scope instead of global to avoid session issues
+      });
+
       if (error) {
         console.error("Error signing out:", error.message);
+        
+        // If session not found, clear local state
+        if (error.message.includes("session_not_found")) {
+          setSession(null);
+          navigate('/login');
+          toast({
+            title: "Session expired",
+            description: "Please log in again",
+          });
+          return;
+        }
+
+        // For other errors
         toast({
           variant: "destructive",
           title: "Error signing out",
           description: error.message,
         });
       } else {
-        navigate('/');
+        navigate('/login');
         toast({
           title: "Signed out successfully",
         });
@@ -63,13 +87,41 @@ const Dashboard = () => {
 
     // Check current session
     const checkSession = async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (!currentSession && mounted) {
-        navigate('/login');
-        return;
-      }
-      if (mounted) {
-        setSession(currentSession);
+      try {
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Session check error:", error);
+          if (mounted) {
+            navigate('/login');
+          }
+          return;
+        }
+
+        if (!currentSession && mounted) {
+          navigate('/login');
+          return;
+        }
+
+        if (mounted) {
+          setSession(currentSession);
+          
+          // Check user role and redirect if necessary
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', currentSession.user.id)
+            .single();
+
+          if (profile?.role === 'superadmin') {
+            navigate('/admin');
+          }
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+        if (mounted) {
+          navigate('/login');
+        }
       }
     };
 
@@ -78,12 +130,25 @@ const Dashboard = () => {
     // Listen for auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (mounted) {
+    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (!mounted) return;
+
+      if (newSession) {
         setSession(newSession);
-        if (!newSession) {
-          navigate('/');
+        
+        // Check role on auth state change
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', newSession.user.id)
+          .single();
+
+        if (profile?.role === 'superadmin') {
+          navigate('/admin');
         }
+      } else {
+        setSession(null);
+        navigate('/login');
       }
     });
 
