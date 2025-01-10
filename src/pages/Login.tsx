@@ -18,7 +18,7 @@ const Login = () => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         checkUserRole(session.user.id);
       }
@@ -34,16 +34,35 @@ const Login = () => {
   }, [navigate, toast]);
 
   const checkUserRole = async (userId: string) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
 
-    if (profile?.role === 'superadmin') {
-      navigate('/admin');
-    } else {
-      navigate('/dashboard');
+      if (error) {
+        console.error('Error fetching user role:', error);
+        toast({
+          title: "Error",
+          description: "There was an error checking your access level",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (profile?.role === 'superadmin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
     }
   };
 
