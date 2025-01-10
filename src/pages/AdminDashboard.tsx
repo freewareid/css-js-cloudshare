@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { FileList } from "@/components/files/FileList";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { AdminHeader } from "@/components/admin/AdminHeader";
+import { StatsCards } from "@/components/admin/StatsCards";
+import { UsersList } from "@/components/admin/UsersList";
+import { FilesList } from "@/components/admin/FilesList";
+
+const ITEMS_PER_PAGE = 10;
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -12,6 +15,7 @@ const AdminDashboard = () => {
   const [files, setFiles] = useState([]);
   const [users, setUsers] = useState([]);
   const [totalStorage, setTotalStorage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     checkAdminAccess();
@@ -31,18 +35,7 @@ const AdminDashboard = () => {
       .eq('id', session.user.id)
       .single();
 
-    if (error) {
-      console.error('Error checking admin access:', error);
-      toast({
-        title: "Error",
-        description: "Error checking admin access",
-        variant: "destructive",
-      });
-      navigate('/dashboard');
-      return;
-    }
-
-    if (!profile || profile.role !== 'superadmin') {
+    if (error || !profile || profile.role !== 'superadmin') {
       toast({
         title: "Access Denied",
         description: "You don't have permission to access the admin dashboard",
@@ -59,11 +52,21 @@ const AdminDashboard = () => {
       .select('*');
     setFiles(filesData || []);
 
-    // Fetch all users with their storage usage
-    const { data: usersData } = await supabase
+    // Fetch all users with their storage usage and email
+    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers();
+    const { data: profilesData } = await supabase
       .from('profiles')
       .select('*');
-    setUsers(usersData || []);
+
+    const enrichedUsers = profilesData?.map(profile => {
+      const authUser = authUsers.find(u => u.id === profile.id);
+      return {
+        ...profile,
+        email: authUser?.email
+      };
+    }) || [];
+    
+    setUsers(enrichedUsers);
 
     // Calculate total storage
     const total = (filesData || []).reduce((acc, file) => acc + (file.size || 0), 0);
@@ -122,82 +125,34 @@ const AdminDashboard = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Pagination calculations
+  const totalPages = Math.ceil(files.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedFiles = files.slice(startIndex, endIndex);
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              navigate('/login');
-            }}
-          >
-            Sign Out
-          </Button>
-        </div>
-      </header>
-
+      <AdminHeader />
       <main className="max-w-7xl mx-auto py-6 px-4">
-        <div className="grid gap-6 mb-8 md:grid-cols-3">
-          <Card className="p-6">
-            <h3 className="font-semibold mb-2">Total Files</h3>
-            <p className="text-2xl">{files.length}</p>
-          </Card>
-          <Card className="p-6">
-            <h3 className="font-semibold mb-2">Total Users</h3>
-            <p className="text-2xl">{users.length}</p>
-          </Card>
-          <Card className="p-6">
-            <h3 className="font-semibold mb-2">Total Storage Used</h3>
-            <p className="text-2xl">{formatBytes(totalStorage)}</p>
-          </Card>
-        </div>
-
+        <StatsCards
+          filesCount={files.length}
+          usersCount={users.length}
+          totalStorage={totalStorage}
+        />
         <div className="space-y-6">
-          <section>
-            <h2 className="text-xl font-semibold mb-4">User Management</h2>
-            <div className="bg-white shadow rounded-lg">
-              <table className="min-w-full">
-                <thead>
-                  <tr>
-                    <th className="px-6 py-3 border-b text-left">User ID</th>
-                    <th className="px-6 py-3 border-b text-left">Storage Used</th>
-                    <th className="px-6 py-3 border-b text-left">Status</th>
-                    <th className="px-6 py-3 border-b text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id}>
-                      <td className="px-6 py-4">{user.id}</td>
-                      <td className="px-6 py-4">{formatBytes(user.storage_used)}</td>
-                      <td className="px-6 py-4">
-                        {user.suspended ? 'Suspended' : 'Active'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Button
-                          variant={user.suspended ? "default" : "destructive"}
-                          onClick={() => handleToggleSuspend(user.id, user.suspended)}
-                        >
-                          {user.suspended ? 'Unsuspend' : 'Suspend'}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold mb-4">All Files</h2>
-            <FileList
-              files={files}
-              onDelete={handleDeleteFile}
-            />
-          </section>
+          <UsersList
+            users={users}
+            onToggleSuspend={handleToggleSuspend}
+            formatBytes={formatBytes}
+          />
+          <FilesList
+            files={paginatedFiles}
+            onDelete={handleDeleteFile}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </main>
     </div>
