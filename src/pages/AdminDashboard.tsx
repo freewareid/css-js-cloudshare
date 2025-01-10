@@ -64,15 +64,11 @@ const AdminDashboard = () => {
 
     // Get user emails from auth.users through profiles
     const enrichedUsers = await Promise.all((profilesData || []).map(async (profile) => {
-      const { data: userData } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', profile.id)
-        .single();
-
+      const { data: { user } } = await supabase.auth.admin.getUserById(profile.id);
+      
       return {
         ...profile,
-        email: userData?.email
+        email: user?.email
       };
     }));
     
