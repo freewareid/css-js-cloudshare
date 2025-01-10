@@ -13,7 +13,12 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [files, setFiles] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<Array<{
+    id: string;
+    email?: string;
+    storage_used: number;
+    suspended: boolean;
+  }>>([]);
   const [totalStorage, setTotalStorage] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -52,19 +57,24 @@ const AdminDashboard = () => {
       .select('*');
     setFiles(filesData || []);
 
-    // Fetch all users with their storage usage and email
-    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers();
+    // Fetch all profiles with their storage usage
     const { data: profilesData } = await supabase
       .from('profiles')
       .select('*');
 
-    const enrichedUsers = profilesData?.map(profile => {
-      const authUser = authUsers.find(u => u.id === profile.id);
+    // Get user emails from auth.users through profiles
+    const enrichedUsers = await Promise.all((profilesData || []).map(async (profile) => {
+      const { data: userData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', profile.id)
+        .single();
+
       return {
         ...profile,
-        email: authUser?.email
+        email: userData?.email
       };
-    }) || [];
+    }));
     
     setUsers(enrichedUsers);
 
