@@ -6,40 +6,72 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import type { Session } from "@supabase/supabase-js";
 
 const Dashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [session, setSession] = useState(null);
-  const [key, setKey] = useState(0); // Add this for forcing re-render
+  const [session, setSession] = useState<Session | null>(null);
+  const [key, setKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleUploadSuccess = () => {
-    setKey(prev => prev + 1); // This will force a re-render of FileGallery
+    setKey(prev => prev + 1);
   };
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate('/login');
-        return;
-      }
-      setSession(session);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (_event === 'SIGNED_OUT') {
+  const handleSignOut = async () => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Error signing out:", error.message);
+        toast({
+          variant: "destructive",
+          title: "Error signing out",
+          description: "Please try again later",
+        });
+      } else {
         navigate('/');
         toast({
           title: "Signed out successfully",
         });
       }
+    } catch (error) {
+      console.error("Unexpected error during sign out:", error);
+      toast({
+        variant: "destructive",
+        title: "Error signing out",
+        description: "An unexpected error occurred",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      if (!currentSession) {
+        navigate('/login');
+        return;
+      }
+      setSession(currentSession);
     });
 
-    return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+    // Listen for auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      if (!newSession) {
+        navigate('/');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   if (!session) return null;
 
@@ -48,9 +80,14 @@ const Dashboard = () => {
       <header className="bg-white border-b">
         <div className="max-w-5xl mx-auto flex h-16 items-center justify-between px-4">
           <h1 className="text-xl font-semibold text-gray-900">CSS Host</h1>
-          <Button variant="ghost" size="sm" onClick={() => supabase.auth.signOut()}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleSignOut}
+            disabled={isLoading}
+          >
             <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
+            {isLoading ? "Signing out..." : "Sign Out"}
           </Button>
         </div>
       </header>
