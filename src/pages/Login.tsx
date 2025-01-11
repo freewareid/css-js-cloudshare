@@ -1,13 +1,15 @@
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { AuthError, AuthApiError } from "@supabase/supabase-js";
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -28,10 +30,29 @@ const Login = () => {
           description: "Welcome back!",
         });
       }
+      if (_event === 'USER_UPDATED' || _event === 'SIGNED_OUT') {
+        setErrorMessage(""); // Clear errors on sign out or user update
+      }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate, toast]);
+
+  const getErrorMessage = (error: AuthError) => {
+    if (error instanceof AuthApiError) {
+      switch (error.status) {
+        case 400:
+          return 'Invalid email or password. Please check your credentials and try again.';
+        case 422:
+          return 'Invalid email format. Please enter a valid email address.';
+        case 429:
+          return 'Too many login attempts. Please try again later.';
+        default:
+          return error.message;
+      }
+    }
+    return 'An unexpected error occurred. Please try again.';
+  };
 
   const checkUserRole = async (userId: string) => {
     try {
@@ -75,6 +96,11 @@ const Login = () => {
             Simple and fast CSS and JS file hosting
           </p>
         </header>
+        {errorMessage && (
+          <div className="mb-4 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+            {errorMessage}
+          </div>
+        )}
         <Auth
           supabaseClient={supabase}
           appearance={{ 
