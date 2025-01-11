@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { FileCode, Trash2, Copy, ExternalLink, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { NotePadEditor } from "../editors/NotePadEditor";
 import { supabase } from "@/integrations/supabase/client";
+import { formatFileSize } from "@/utils/fileUtils";
 
 type FileCardProps = {
   id: string;
@@ -15,24 +15,15 @@ type FileCardProps = {
   onDelete: (id: string) => void;
 };
 
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
 export const FileCard = ({ id, name, url, size, type, onDelete }: FileCardProps) => {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [fileContent, setFileContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
   const publicUrl = url.replace('pub-c7fe5d7345b64a8aa90756d140154223.r2.dev', 'cdn.000.web.id');
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = useCallback(async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       toast({
@@ -46,13 +37,9 @@ export const FileCard = ({ id, name, url, size, type, onDelete }: FileCardProps)
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const openInNewTab = () => {
-    window.open(publicUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleEdit = async () => {
+  const handleEdit = useCallback(async () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase.functions.invoke('get-file-content', {
@@ -72,12 +59,7 @@ export const FileCard = ({ id, name, url, size, type, onDelete }: FileCardProps)
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleCloseEditor = () => {
-    setIsEditing(false);
-    setFileContent("");
-  };
+  }, [id, toast]);
 
   return (
     <>
@@ -110,7 +92,7 @@ export const FileCard = ({ id, name, url, size, type, onDelete }: FileCardProps)
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                onClick={openInNewTab}
+                onClick={() => window.open(publicUrl, '_blank', 'noopener,noreferrer')}
                 title="Open in new tab"
               >
                 <ExternalLink className="h-4 w-4" />
@@ -145,7 +127,10 @@ export const FileCard = ({ id, name, url, size, type, onDelete }: FileCardProps)
         <NotePadEditor
           fileId={id}
           initialContent={fileContent}
-          onClose={handleCloseEditor}
+          onClose={() => {
+            setIsEditing(false);
+            setFileContent("");
+          }}
         />
       )}
     </>

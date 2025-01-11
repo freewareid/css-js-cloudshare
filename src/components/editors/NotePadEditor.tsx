@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { EditorLoader } from "../loaders/EditorLoader";
 
 type NotePadEditorProps = {
   fileId: string;
@@ -13,11 +14,13 @@ type NotePadEditorProps = {
 export const NotePadEditor = ({ fileId, initialContent, onClose }: NotePadEditorProps) => {
   const [content, setContent] = useState(initialContent);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
       setIsSaving(true);
+      setIsLoading(true);
       
       const { error: uploadError } = await supabase.functions.invoke('update-css-file', {
         body: { fileId, content }
@@ -39,8 +42,13 @@ export const NotePadEditor = ({ fileId, initialContent, onClose }: NotePadEditor
       });
     } finally {
       setIsSaving(false);
+      setIsLoading(false);
     }
-  };
+  }, [content, fileId, onClose, toast]);
+
+  if (isLoading) {
+    return <EditorLoader />;
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">

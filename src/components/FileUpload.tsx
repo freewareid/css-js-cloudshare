@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { validateFile } from "@/utils/fileUtils";
 
 type FileUploadProps = {
   userId: string;
@@ -13,54 +14,24 @@ export const FileUpload = ({ userId, onUploadSuccess }: FileUploadProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
-  const validateFileExtension = (name: string) => {
-    const extension = name.split('.').pop()?.toLowerCase();
-    return extension === 'css' || extension === 'js';
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files);
-    handleFiles(files);
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    handleFiles(files);
-  };
-
-  const handleFiles = async (files: File[]) => {
-    const validFiles = files.filter(file => validateFileExtension(file.name));
-
-    if (validFiles.length === 0) {
-      toast({
-        title: "Invalid files",
-        description: "Only CSS and JS files are allowed",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    for (const file of validFiles) {
-      if (file.size > 1024 * 1024) {
+  const handleFiles = useCallback(async (files: File[]) => {
+    const validFiles = files.filter(file => {
+      try {
+        validateFile(file);
+        return true;
+      } catch (error: any) {
         toast({
-          title: "File too large",
-          description: "Maximum file size is 1MB",
+          title: "Invalid file",
+          description: error.message,
           variant: "destructive",
         });
-        continue;
+        return false;
       }
+    });
 
+    if (validFiles.length === 0) return;
+
+    for (const file of validFiles) {
       try {
         setIsUploading(true);
         
@@ -73,10 +44,7 @@ export const FileUpload = ({ userId, onUploadSuccess }: FileUploadProps) => {
           }
         });
 
-        if (error) {
-          console.error('Upload error:', error);
-          throw error;
-        }
+        if (error) throw error;
 
         if (!data?.url) {
           throw new Error('No URL returned from upload');
@@ -101,15 +69,30 @@ export const FileUpload = ({ userId, onUploadSuccess }: FileUploadProps) => {
         setIsUploading(false);
       }
     }
-  };
+  }, [userId, onUploadSuccess, toast]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    handleFiles(files);
+  }, [handleFiles]);
+
+  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    handleFiles(files);
+  }, [handleFiles]);
 
   return (
     <div
       className={`relative h-48 rounded-lg border-2 border-dashed p-6 transition-colors ${
         isDragging ? "border-primary bg-primary/10" : "border-gray-300"
       }`}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      }}
+      onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
     >
       <div className="flex h-full flex-col items-center justify-center gap-3">
