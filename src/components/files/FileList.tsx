@@ -7,6 +7,8 @@ export type FileListProps = {
     url: string;
     size: number;
     type: "css" | "js";
+    created_at: string;
+    last_edited_at: string | null;
   }[];
   onDelete: (id: string) => void;
 };

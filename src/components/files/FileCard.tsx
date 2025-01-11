@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { NotePadEditor } from "../editors/NotePadEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { formatFileSize } from "@/utils/fileUtils";
+import { format } from "date-fns";
 
 type FileCardProps = {
   id: string;
@@ -12,10 +13,21 @@ type FileCardProps = {
   url: string;
   size: number;
   type: "css" | "js";
+  created_at: string;
+  last_edited_at: string | null;
   onDelete: (id: string) => void;
 };
 
-export const FileCard = ({ id, name, url, size, type, onDelete }: FileCardProps) => {
+export const FileCard = ({ 
+  id, 
+  name, 
+  url, 
+  size, 
+  type, 
+  created_at,
+  last_edited_at,
+  onDelete 
+}: FileCardProps) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [fileContent, setFileContent] = useState("");
@@ -108,6 +120,12 @@ export const FileCard = ({ id, name, url, size, type, onDelete }: FileCardProps)
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
+              )}
+            </div>
+            <div className="mt-2 flex gap-4 text-xs text-gray-500">
+              <span>Uploaded: {format(new Date(created_at), 'MMM d, yyyy HH:mm')}</span>
+              {last_edited_at && (
+                <span>Last edited: {format(new Date(last_edited_at), 'MMM d, yyyy HH:mm')}</span>
               )}
             </div>
           </div>

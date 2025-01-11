@@ -15,6 +15,7 @@ type File = {
   type: "css" | "js";
   size: number;
   created_at: string;
+  last_edited_at: string | null;
 };
 
 export const FileGallery = ({ userId }: FileGalleryProps) => {
