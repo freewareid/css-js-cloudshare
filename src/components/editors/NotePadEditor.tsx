@@ -22,19 +22,37 @@ export const NotePadEditor = ({ fileId, initialContent, onClose }: NotePadEditor
       setIsSaving(true);
       setIsLoading(true);
       
-      const { error: uploadError } = await supabase.functions.invoke('update-css-file', {
-        body: { fileId, content }
+      // Get the current user's ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Update the file content
+      const { error: uploadError } = await supabase.functions.invoke('update-file-content', {
+        body: { 
+          fileId, 
+          content,
+          userId: user.id
+        }
       });
 
       if (uploadError) throw uploadError;
 
+      // Update the last_edited_at timestamp
+      const { error: updateError } = await supabase
+        .from('files')
+        .update({ last_edited_at: new Date().toISOString() })
+        .eq('id', fileId);
+
+      if (updateError) throw updateError;
+
       toast({
         title: "Changes saved",
-        description: "Your CSS file has been updated successfully",
+        description: "Your file has been updated successfully",
       });
       
       onClose();
     } catch (error: any) {
+      console.error('Error saving file:', error);
       toast({
         title: "Error saving changes",
         description: error.message,
