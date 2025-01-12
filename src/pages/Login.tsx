@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthForm } from "@/components/auth/AuthForm";
@@ -8,43 +8,48 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const checkUserProfile = useCallback(async (userId: string) => {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+      return null;
+    }
+
+    return profile;
+  }, []);
+
+  const handleAuthChange = useCallback(async (session: any) => {
+    if (!session) return;
+
+    const profile = await checkUserProfile(session.user.id);
+    if (!profile) return;
+
+    if (profile.role === 'superadmin') {
+      navigate('/admin');
+    } else {
+      navigate('/dashboard');
+    }
+  }, [navigate, checkUserProfile]);
+
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuthChange(session);
+    });
 
-        if (profile?.role === 'superadmin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
-      }
-    };
-
-    checkSession();
-
+    // Subscribe to auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
+        await handleAuthChange(session);
 
-        if (profile?.role === 'superadmin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
-
-        if (_event === 'SIGNED_IN') {
+        if (event === 'SIGNED_IN') {
           toast({
             title: "Successfully signed in",
             description: "Welcome back!",
@@ -54,7 +59,7 @@ const Login = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+  }, [handleAuthChange, toast]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
