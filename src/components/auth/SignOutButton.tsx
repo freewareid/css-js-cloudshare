@@ -26,10 +26,15 @@ export const SignOutButton = () => {
         return;
       }
 
-      navigate('/login');
+      // Clear any stored session data
+      localStorage.removeItem('supabase.auth.token');
+      
       toast({
         title: "Signed out successfully",
       });
+      
+      // Force navigation to login page
+      window.location.href = '/login';
     } catch (error: any) {
       console.error('Error signing out:', error);
       toast({
@@ -44,9 +49,10 @@ export const SignOutButton = () => {
 
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       onClick={handleSignOut}
       disabled={isLoading}
+      className="w-full justify-start"
     >
       {isLoading ? "Signing out..." : "Sign Out"}
     </Button>

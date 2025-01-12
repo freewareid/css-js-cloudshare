@@ -6,6 +6,7 @@ import { NotePadEditor } from "../editors/NotePadEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { formatFileSize } from "@/utils/fileUtils";
 import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
 
 type FileCardProps = {
   id: string;
@@ -118,7 +119,11 @@ export const FileCard = ({
                   disabled={isLoading}
                   title="Edit file"
                 >
-                  <Edit className="h-4 w-4" />
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Edit className="h-4 w-4" />
+                  )}
                 </Button>
               )}
             </div>
