@@ -33,8 +33,8 @@ export const SignOutButton = () => {
         title: "Signed out successfully",
       });
       
-      // Force navigation to login page
-      window.location.href = '/login';
+      // Navigate to homepage
+      navigate('/');
     } catch (error: any) {
       console.error('Error signing out:', error);
       toast({
