@@ -13,6 +13,12 @@ export const SignOutButton = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
+        // Clear all local storage items related to Supabase
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-')) {
+            localStorage.removeItem(key);
+          }
+        });
         navigate('/');
       }
     });
@@ -25,6 +31,13 @@ export const SignOutButton = () => {
     
     setIsLoading(true);
     try {
+      // First clear any stored session data
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
       const { error } = await supabase.auth.signOut();
 
       if (error) {
@@ -37,9 +50,6 @@ export const SignOutButton = () => {
         return;
       }
 
-      // Clear any stored session data
-      localStorage.removeItem('supabase.auth.token');
-      
       toast({
         title: "Signed out successfully",
       });
