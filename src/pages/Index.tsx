@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { FileUpload } from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { FileList } from "@/components/files/FileList";
@@ -39,16 +38,11 @@ const Index = () => {
 
   useEffect(() => {
     fetchAnonymousFiles();
-
-    window.addEventListener('fileUploaded', fetchAnonymousFiles);
-    return () => {
-      window.removeEventListener('fileUploaded', fetchAnonymousFiles);
-    };
   }, []);
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <header className="fixed w-full z-50 bg-white border-b border-gray-100">
         <div className="max-w-[1440px] mx-auto flex h-16 items-center justify-between px-6">
           <h1 className="text-xl font-medium text-gray-900">CSS Host</h1>
           {session ? (
@@ -81,9 +75,8 @@ const Index = () => {
       </header>
 
       <main className="pt-16">
-        <section className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white py-24 sm:py-32">
-          <div className="absolute inset-0 bg-[url(/grid.svg)] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
-          <div className="relative mx-auto max-w-[1440px] px-6">
+        <section className="bg-white py-24 sm:py-32">
+          <div className="mx-auto max-w-[1440px] px-6">
             <div className="max-w-2xl">
               <h2 className="text-6xl font-semibold tracking-tight text-gray-900 mb-6">
                 Share CSS & JS files.
@@ -131,15 +124,11 @@ const Index = () => {
                 </p>
               </div>
             </div>
-
-            <div className="max-w-2xl mx-auto">
-              <FileUpload userId="00000000-0000-0000-0000-000000000000" />
-            </div>
           </div>
         </section>
 
         {files.length > 0 && (
-          <section className="py-24 bg-gray-50">
+          <section className="py-24 bg-white">
             <div className="max-w-[1440px] mx-auto px-6">
               <h2 className="text-2xl font-semibold text-gray-900 mb-8">Recent Uploads</h2>
               <FileList 
