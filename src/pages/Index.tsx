@@ -43,7 +43,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-white">
       <header className="fixed w-full z-50 bg-white border-b border-gray-100">
-        <div className="max-w-[1440px] mx-auto flex h-16 items-center justify-between px-6">
+        <div className="max-w-4xl mx-auto flex h-16 items-center justify-between px-6">
           <h1 className="text-xl font-medium text-gray-900">CSS Host</h1>
           {session ? (
             <div className="space-x-4">
@@ -74,9 +74,9 @@ const Index = () => {
         </div>
       </header>
 
-      <main className="pt-16">
-        <section className="bg-white py-24 sm:py-32">
-          <div className="mx-auto max-w-[1440px] px-6">
+      <main className="pt-16 space-y-8">
+        <section className="bg-white py-24">
+          <div className="mx-auto max-w-4xl px-6">
             <div className="max-w-2xl">
               <h2 className="text-6xl font-semibold tracking-tight text-gray-900 mb-6">
                 Share CSS & JS files.
@@ -103,8 +103,8 @@ const Index = () => {
         </section>
 
         <section className="py-24 bg-white">
-          <div className="max-w-[1440px] mx-auto px-6">
-            <div className="grid gap-12 md:grid-cols-3 mb-16">
+          <div className="max-w-4xl mx-auto px-6 space-y-8">
+            <div className="grid gap-12 md:grid-cols-3">
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold text-gray-900">Free Upload</h3>
                 <p className="text-gray-600 leading-relaxed">
@@ -129,8 +129,8 @@ const Index = () => {
 
         {files.length > 0 && (
           <section className="py-24 bg-white">
-            <div className="max-w-[1440px] mx-auto px-6">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-8">Recent Uploads</h2>
+            <div className="max-w-4xl mx-auto px-6 space-y-8">
+              <h2 className="text-2xl font-semibold text-gray-900">Recent Uploads</h2>
               <FileList 
                 files={files} 
                 onDelete={() => {}} 
@@ -141,7 +141,7 @@ const Index = () => {
       </main>
 
       <footer className="bg-white border-t border-gray-100">
-        <div className="max-w-[1440px] mx-auto px-6 py-12">
+        <div className="max-w-4xl mx-auto px-6 py-12">
           <p className="text-sm text-gray-600">
             © {new Date().getFullYear()} CSS Host. All rights reserved.
           </p>

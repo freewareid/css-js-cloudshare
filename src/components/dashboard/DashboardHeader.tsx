@@ -14,7 +14,7 @@ export const DashboardHeader = () => {
 
   return (
     <header className="bg-white border-b border-gray-100">
-      <div className="max-w-[1440px] mx-auto flex h-16 items-center justify-between px-6">
+      <div className="max-w-4xl mx-auto flex h-16 items-center justify-between px-6">
         <h1 className="text-xl font-medium text-gray-900">CSS Host</h1>
         <div className="flex items-center gap-4">
           <DropdownMenu>

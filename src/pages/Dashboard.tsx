@@ -93,7 +93,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-white">
       <DashboardHeader />
-      <div className="max-w-[1440px] mx-auto">
+      <div className="max-w-4xl mx-auto space-y-8">
         <DashboardContent 
           userId={session.user.id}
           onUploadSuccess={handleUploadSuccess}

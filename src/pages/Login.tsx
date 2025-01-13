@@ -62,9 +62,9 @@ const Login = () => {
   }, [handleAuthChange, toast]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <div className="container max-w-md py-8">
-        <header className="mb-12 text-center">
+    <div className="min-h-screen bg-white">
+      <div className="max-w-4xl mx-auto py-8 px-6 space-y-8">
+        <header className="text-center">
           <h1 className="mb-4 text-4xl font-bold text-gray-900">CSS Host</h1>
           <p className="text-lg text-gray-600">
             Simple and fast CSS and JS file hosting
