@@ -8,9 +8,9 @@ type DashboardContentProps = {
 
 export const DashboardContent = ({ userId, onUploadSuccess }: DashboardContentProps) => {
   return (
-    <main className="max-w-5xl mx-auto px-4 py-8">
+    <main className="px-6 py-8">
       <div className="space-y-8">
-        <section>
+        <section className="bg-white rounded-xl border border-gray-100 p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">
             Upload Files
           </h2>
@@ -20,7 +20,7 @@ export const DashboardContent = ({ userId, onUploadSuccess }: DashboardContentPr
           />
         </section>
 
-        <section>
+        <section className="bg-white rounded-xl border border-gray-100 p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">
             Your Files
           </h2>

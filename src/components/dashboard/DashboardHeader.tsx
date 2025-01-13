@@ -13,17 +13,21 @@ export const DashboardHeader = () => {
   const navigate = useNavigate();
 
   return (
-    <header className="bg-white border-b">
-      <div className="max-w-5xl mx-auto flex h-16 items-center justify-between px-4">
-        <h1 className="text-xl font-semibold text-gray-900">CSS Host</h1>
+    <header className="bg-white border-b border-gray-100">
+      <div className="max-w-[1440px] mx-auto flex h-16 items-center justify-between px-6">
+        <h1 className="text-xl font-medium text-gray-900">CSS Host</h1>
         <div className="flex items-center gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="hover:bg-gray-100 transition-colors"
+              >
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => navigate('/profile')}>
                 Profile Settings
               </DropdownMenuItem>
