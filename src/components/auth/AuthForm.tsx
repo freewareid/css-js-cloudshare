@@ -99,9 +99,13 @@ export const AuthForm = () => {
         }}
         theme="light"
         providers={[]}
-        onError={(error) => {
-          console.error('Auth error:', error);
-          setErrorMessage(getErrorMessage(error));
+        localization={{
+          variables: {
+            sign_in: {
+              email_label: 'Email',
+              password_label: 'Password',
+            },
+          },
         }}
       />
     </div>
