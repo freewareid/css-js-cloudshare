@@ -55,6 +55,11 @@ export const FileCard = ({
     }
   };
 
+  const handleClose = () => {
+    setIsEditing(false);
+    setFileContent("");
+  };
+
   return (
     <>
       <div className="group relative flex items-center justify-between rounded-lg border bg-white p-4 shadow-sm transition-all hover:shadow-md">
@@ -78,10 +83,7 @@ export const FileCard = ({
         <NotePadEditor
           fileId={id}
           initialContent={fileContent}
-          onClose={() => {
-            setIsEditing(false);
-            setFileContent("");
-          }}
+          onClose={handleClose}
         />
       )}
     </>
