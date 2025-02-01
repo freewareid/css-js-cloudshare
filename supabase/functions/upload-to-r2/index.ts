@@ -44,8 +44,13 @@ serve(async (req) => {
       ContentType: fileType,
     })
 
-    await R2.send(command)
-    console.log('File uploaded to R2 successfully')
+    try {
+      await R2.send(command)
+      console.log('File uploaded to R2 successfully')
+    } catch (r2Error) {
+      console.error('R2 Upload Error:', r2Error)
+      throw new Error(`Failed to upload to R2: ${r2Error.message}`)
+    }
 
     // Get the public URL
     const publicUrl = `https://cdn.000.web.id/${key}`
