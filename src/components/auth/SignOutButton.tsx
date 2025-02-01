@@ -9,11 +9,10 @@ export const SignOutButton = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Add effect to check auth state
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
-        // Clear all local storage items related to Supabase
+        // Clear all Supabase-related items from localStorage
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith('sb-')) {
             localStorage.removeItem(key);
