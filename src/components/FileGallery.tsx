@@ -20,28 +20,40 @@ type File = {
 
 export const FileGallery = ({ userId }: FileGalleryProps) => {
   const [files, setFiles] = useState<File[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   const fetchFiles = async () => {
-    console.log('Fetching files for user:', userId);
-    const { data: filesData, error: filesError } = await supabase
-      .from("files")
-      .select("*")
-      .eq("user_id", userId)
-      .order('created_at', { ascending: false });
+    try {
+      console.log('Fetching files for user:', userId);
+      const { data: filesData, error: filesError } = await supabase
+        .from("files")
+        .select("*")
+        .eq("user_id", userId)
+        .order('created_at', { ascending: false });
 
-    if (filesError) {
-      console.error('Error fetching files:', filesError);
+      if (filesError) {
+        console.error('Error fetching files:', filesError);
+        toast({
+          title: "Error fetching files",
+          description: filesError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Files fetched:', filesData);
+      setFiles(filesData as File[]);
+    } catch (error: any) {
+      console.error('Error in fetchFiles:', error);
       toast({
-        title: "Error fetching files",
-        description: filesError.message,
+        title: "Error loading files",
+        description: "Failed to load your files. Please try again.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsLoading(false);
     }
-
-    console.log('Files fetched:', filesData);
-    setFiles(filesData as File[]);
   };
 
   useEffect(() => {
@@ -97,6 +109,10 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
       });
     }
   };
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading your files...</div>;
+  }
 
   return <FileGalleryList files={files} onDelete={deleteFile} />;
 };
