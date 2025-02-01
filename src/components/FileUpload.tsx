@@ -34,21 +34,15 @@ export const FileUpload = ({ userId, onUploadSuccess }: FileUploadProps) => {
     for (const file of validFiles) {
       try {
         setIsUploading(true);
-        console.log('Starting file upload:', file.name);
         
-        const fileContent = await file.text();
-        console.log('File content loaded, sending to edge function');
-
         const { data, error } = await supabase.functions.invoke('upload-to-r2', {
           body: {
             fileName: file.name,
             fileType: file.type,
             userId: userId,
-            fileContent: fileContent,
+            fileContent: await file.text(),
           }
         });
-
-        console.log('Upload response:', { data, error });
 
         if (error) throw error;
 

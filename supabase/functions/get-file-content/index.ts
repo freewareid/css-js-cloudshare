@@ -14,19 +14,18 @@ serve(async (req) => {
 
   try {
     const { fileId } = await req.json()
-    console.log('Getting file content for:', fileId)
-
+    
     if (!fileId) {
       throw new Error('File ID is required')
     }
 
-    // Initialize Supabase client
+    console.log('Getting file details for ID:', fileId)
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get file metadata from database
     const { data: file, error: dbError } = await supabase
       .from('files')
       .select('*')
@@ -34,10 +33,18 @@ serve(async (req) => {
       .single()
 
     if (dbError || !file) {
-      throw new Error('File not found')
+      console.error('Database error:', dbError)
+      throw new Error('File not found in database')
     }
 
-    // Initialize R2 client
+    console.log('File details retrieved:', { name: file.name, type: file.type, user_id: file.user_id })
+
+    // Get the folder name (12 chars from user ID)
+    const folderName = file.user_id.replace(/-/g, '').substring(0, 12)
+    const key = `${folderName}/${file.name}`
+    
+    console.log('Fetching file from R2 with key:', key)
+
     const R2 = new S3Client({
       region: "auto",
       endpoint: `https://${Deno.env.get('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
@@ -47,32 +54,49 @@ serve(async (req) => {
       },
     })
 
-    // Extract key from URL
-    const key = file.url.replace('https://cdn.000.web.id/', '')
-    console.log('Fetching from R2 with key:', key)
-
-    // Get file from R2
     const command = new GetObjectCommand({
       Bucket: "st8",
       Key: key,
     })
 
-    const r2Response = await R2.send(command)
-    const content = await r2Response.Body?.text()
+    try {
+      const response = await R2.send(command)
+      
+      if (!response.Body) {
+        throw new Error('No file content received from R2')
+      }
 
-    if (!content) {
-      throw new Error('Failed to read file content')
+      const streamReader = response.Body.getReader()
+      const chunks = []
+      
+      while (true) {
+        const { done, value } = await streamReader.read()
+        if (done) break
+        chunks.push(value)
+      }
+
+      const content = new TextDecoder().decode(
+        new Uint8Array(chunks.reduce((acc, chunk) => [...acc, ...chunk], []))
+      )
+
+      console.log('File content retrieved successfully')
+
+      return new Response(
+        JSON.stringify({ content }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } catch (r2Error) {
+      console.error('R2 error:', r2Error)
+      throw new Error(`Failed to fetch file from R2: ${r2Error.message}`)
     }
-
-    return new Response(
-      JSON.stringify({ content }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
   } catch (error) {
     console.error('Error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
     )
   }
 })

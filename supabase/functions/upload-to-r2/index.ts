@@ -16,7 +16,7 @@ serve(async (req) => {
     const { fileName, fileType, userId, fileContent } = await req.json()
     console.log('Processing upload request:', { fileName, fileType, userId })
 
-    if (!fileName || !fileContent || !userId) {
+    if (!fileName || !fileContent) {
       throw new Error('Missing required file information')
     }
 
@@ -30,10 +30,13 @@ serve(async (req) => {
       },
     })
 
-    // Generate folder name from userId (12 chars)
-    const folderName = userId.replace(/-/g, '').substring(0, 12)
-    const key = `${folderName}/${fileName}`
+    // Generate a 12-character alphanumeric folder name from userId
+    const folderName = userId === '00000000-0000-0000-0000-000000000000' 
+      ? 'anonymous'
+      : userId.replace(/-/g, '').substring(0, 12);
 
+    // Generate file path
+    const key = `${folderName}/${fileName}`
     console.log('Uploading to R2 with key:', key)
 
     // Upload to R2
@@ -65,7 +68,7 @@ serve(async (req) => {
     const { error: dbError } = await supabase
       .from('files')
       .insert({
-        user_id: userId,
+        user_id: userId === 'anonymous' ? '00000000-0000-0000-0000-000000000000' : userId,
         name: fileName,
         url: publicUrl,
         type: fileName.split('.').pop() || '',
@@ -87,7 +90,10 @@ serve(async (req) => {
     console.error('Error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
     )
   }
 })

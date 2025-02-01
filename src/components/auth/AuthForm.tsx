@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AuthError, AuthApiError } from "@supabase/supabase-js";
-import { useNavigate } from "react-router-dom";
 
 const getErrorMessage = (error: AuthError) => {
   if (error instanceof AuthApiError) {
@@ -24,58 +23,16 @@ const getErrorMessage = (error: AuthError) => {
 
 export const AuthForm = () => {
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const navigate = useNavigate();
 
   useEffect(() => {
-    // Check and refresh session on component mount
-    const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error("Session check error:", error);
-        return;
-      }
-
-      if (session) {
-        // If we have a valid session, redirect to dashboard
-        navigate('/dashboard');
-      }
-    };
-
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        // Get user profile to determine role
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile?.role === 'superadmin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
-      } else if (event === 'SIGNED_OUT') {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'SIGNED_OUT') {
         setErrorMessage(""); // Clear errors on sign out
-        // Clear all Supabase-related items from localStorage
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('sb-')) {
-            localStorage.removeItem(key);
-          }
-        });
-        navigate('/');
-      } else if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed successfully');
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4">
@@ -99,14 +56,6 @@ export const AuthForm = () => {
         }}
         theme="light"
         providers={[]}
-        localization={{
-          variables: {
-            sign_in: {
-              email_label: 'Email',
-              password_label: 'Password',
-            },
-          },
-        }}
       />
     </div>
   );
