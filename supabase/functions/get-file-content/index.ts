@@ -8,6 +8,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -26,15 +27,20 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Get file details from database
     const { data: file, error: dbError } = await supabase
       .from('files')
       .select('*')
       .eq('id', fileId)
       .single()
 
-    if (dbError || !file) {
+    if (dbError) {
       console.error('Database error:', dbError)
-      throw new Error('File not found in database')
+      throw new Error('Error fetching file details')
+    }
+
+    if (!file) {
+      throw new Error('File not found')
     }
 
     console.log('File details retrieved:', { name: file.name, type: file.type, user_id: file.user_id })
@@ -54,12 +60,12 @@ serve(async (req) => {
       },
     })
 
-    const command = new GetObjectCommand({
-      Bucket: "st8",
-      Key: key,
-    })
-
     try {
+      const command = new GetObjectCommand({
+        Bucket: "st8",
+        Key: key,
+      })
+
       const response = await R2.send(command)
       
       if (!response.Body) {
@@ -83,7 +89,12 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ content }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json'
+          } 
+        }
       )
     } catch (r2Error) {
       console.error('R2 error:', r2Error)
@@ -92,7 +103,9 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'An unknown error occurred'
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500
