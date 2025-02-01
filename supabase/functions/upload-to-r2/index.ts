@@ -16,7 +16,7 @@ serve(async (req) => {
     const { fileName, fileType, userId, fileContent } = await req.json()
     console.log('Processing upload request:', { fileName, fileType, userId })
 
-    if (!fileName || !fileContent) {
+    if (!fileName || !fileContent || !userId) {
       throw new Error('Missing required file information')
     }
 
@@ -30,13 +30,10 @@ serve(async (req) => {
       },
     })
 
-    // Generate a 12-character alphanumeric folder name from userId
-    const folderName = userId === '00000000-0000-0000-0000-000000000000' 
-      ? 'anonymous'
-      : userId.replace(/-/g, '').substring(0, 12);
-
-    // Generate file path
+    // Generate folder name from userId (12 chars)
+    const folderName = userId.replace(/-/g, '').substring(0, 12)
     const key = `${folderName}/${fileName}`
+
     console.log('Uploading to R2 with key:', key)
 
     // Upload to R2
@@ -47,13 +44,8 @@ serve(async (req) => {
       ContentType: fileType,
     })
 
-    try {
-      await R2.send(command)
-      console.log('File uploaded to R2 successfully')
-    } catch (r2Error) {
-      console.error('R2 Upload Error:', r2Error)
-      throw new Error(`Failed to upload to R2: ${r2Error.message}`)
-    }
+    await R2.send(command)
+    console.log('File uploaded to R2 successfully')
 
     // Get the public URL
     const publicUrl = `https://cdn.000.web.id/${key}`
@@ -68,7 +60,7 @@ serve(async (req) => {
     const { error: dbError } = await supabase
       .from('files')
       .insert({
-        user_id: userId === 'anonymous' ? '00000000-0000-0000-0000-000000000000' : userId,
+        user_id: userId,
         name: fileName,
         url: publicUrl,
         type: fileName.split('.').pop() || '',
@@ -90,10 +82,7 @@ serve(async (req) => {
     console.error('Error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
 })

@@ -23,6 +23,7 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
   const { toast } = useToast();
 
   const fetchFiles = async () => {
+    console.log('Fetching files for user:', userId);
     const { data: filesData, error: filesError } = await supabase
       .from("files")
       .select("*")
@@ -30,6 +31,7 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
       .order('created_at', { ascending: false });
 
     if (filesError) {
+      console.error('Error fetching files:', filesError);
       toast({
         title: "Error fetching files",
         description: filesError.message,
@@ -38,12 +40,14 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
       return;
     }
 
+    console.log('Files fetched:', filesData);
     setFiles(filesData as File[]);
   };
 
   useEffect(() => {
     fetchFiles();
 
+    // Subscribe to realtime changes
     const channel = supabase
       .channel('public:files')
       .on(
@@ -54,7 +58,8 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
           table: 'files',
           filter: `user_id=eq.${userId}`,
         },
-        () => {
+        (payload) => {
+          console.log('Realtime update received:', payload);
           fetchFiles();
         }
       )
@@ -84,6 +89,7 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
       
       fetchFiles();
     } catch (error: any) {
+      console.error('Error deleting file:', error);
       toast({
         title: "Error deleting file",
         description: error.message,
