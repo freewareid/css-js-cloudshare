@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
-import { EditorLoader } from "./EditorLoader";
 
 type CSSEditorProps = {
   fileId: string;
@@ -11,46 +10,10 @@ type CSSEditorProps = {
   onClose: () => void;
 };
 
-const FILE_SIZE_LIMIT = 500000; // 500KB limit for editing
-const LOAD_TIMEOUT = 5000; // 5 seconds timeout
-
 export const CSSEditor = ({ fileId, initialContent, onClose }: CSSEditorProps) => {
   const [content, setContent] = useState(initialContent);
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const loadTimer = setTimeout(() => {
-      if (isLoading && initialContent.length > FILE_SIZE_LIMIT) {
-        toast({
-          title: "File too large",
-          description: "This file is too large to edit. Maximum size is 500KB.",
-          variant: "destructive",
-        });
-        onClose();
-      }
-    }, LOAD_TIMEOUT);
-
-    // Simulate loading delay for demonstration
-    const loadContent = setTimeout(() => {
-      if (initialContent.length > FILE_SIZE_LIMIT) {
-        toast({
-          title: "File too large",
-          description: "This file is too large to edit. Maximum size is 500KB.",
-          variant: "destructive",
-        });
-        onClose();
-      } else {
-        setIsLoading(false);
-      }
-    }, 1000);
-
-    return () => {
-      clearTimeout(loadTimer);
-      clearTimeout(loadContent);
-    };
-  }, [initialContent, isLoading, onClose, toast]);
 
   const handleSave = async () => {
     try {
@@ -78,10 +41,6 @@ export const CSSEditor = ({ fileId, initialContent, onClose }: CSSEditorProps) =
       setIsSaving(false);
     }
   };
-
-  if (isLoading) {
-    return <EditorLoader />;
-  }
 
   return (
     <div className="w-full max-w-3xl mx-auto">

@@ -66,17 +66,6 @@ serve(async (req) => {
     await R2.send(command)
     console.log('File updated successfully in R2')
 
-    // Update the last_edited_at timestamp in the database
-    const { error: updateError } = await supabase
-      .from('files')
-      .update({ last_edited_at: new Date().toISOString() })
-      .eq('id', fileId)
-
-    if (updateError) {
-      console.error('Error updating last_edited_at:', updateError)
-      throw new Error('Failed to update last edited timestamp')
-    }
-
     return new Response(
       JSON.stringify({ message: 'File updated successfully' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

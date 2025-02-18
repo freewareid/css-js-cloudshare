@@ -1,76 +1,77 @@
-import { useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { Auth } from "@supabase/auth-ui-react";
+import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthForm } from "@/components/auth/AuthForm";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const checkUserProfile = useCallback(async (userId: string) => {
-    const { data: profile, error } = await supabase
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        checkUserRole(session.user.id);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        checkUserRole(session.user.id);
+      }
+      if (_event === 'SIGNED_IN') {
+        toast({
+          title: "Successfully signed in",
+          description: "Welcome back!",
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate, toast]);
+
+  const checkUserRole = async (userId: string) => {
+    const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', userId)
       .single();
 
-    if (error) {
-      console.error('Error fetching profile:', error);
-      return null;
-    }
-
-    return profile;
-  }, []);
-
-  const handleAuthChange = useCallback(async (session: any) => {
-    if (!session) return;
-
-    const profile = await checkUserProfile(session.user.id);
-    if (!profile) return;
-
-    if (profile.role === 'superadmin') {
+    if (profile?.role === 'superadmin') {
       navigate('/admin');
     } else {
       navigate('/dashboard');
     }
-  }, [navigate, checkUserProfile]);
-
-  useEffect(() => {
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      handleAuthChange(session);
-    });
-
-    // Subscribe to auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        await handleAuthChange(session);
-
-        if (event === 'SIGNED_IN') {
-          toast({
-            title: "Successfully signed in",
-            description: "Welcome back!",
-          });
-        }
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [handleAuthChange, toast]);
+  };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto py-8 px-6 space-y-8">
-        <header className="text-center">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
+      <div className="container max-w-md py-8">
+        <header className="mb-12 text-center">
           <h1 className="mb-4 text-4xl font-bold text-gray-900">CSS Host</h1>
           <p className="text-lg text-gray-600">
             Simple and fast CSS and JS file hosting
           </p>
         </header>
-        <AuthForm />
+        <Auth
+          supabaseClient={supabase}
+          appearance={{ 
+            theme: ThemeSupa,
+            variables: {
+              default: {
+                colors: {
+                  brand: '#4F46E5',
+                  brandAccent: '#6366F1',
+                },
+              },
+            },
+          }}
+          theme="light"
+          providers={[]}
+        />
       </div>
     </div>
   );

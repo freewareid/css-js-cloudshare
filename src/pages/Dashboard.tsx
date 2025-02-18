@@ -1,104 +1,83 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { FileUpload } from "@/components/FileUpload";
+import { FileGallery } from "@/components/FileGallery";
+import { LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import type { Session } from "@supabase/supabase-js";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { DashboardContent } from "@/components/dashboard/DashboardContent";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
-  const [session, setSession] = useState<Session | null>(null);
-  const [key, setKey] = useState(0);
+  const navigate = useNavigate();
+  const [session, setSession] = useState(null);
+  const [key, setKey] = useState(0); // Add this for forcing re-render
 
   const handleUploadSuccess = () => {
-    setKey(prev => prev + 1);
+    setKey(prev => prev + 1); // This will force a re-render of FileGallery
   };
 
   useEffect(() => {
-    let mounted = true;
-
-    const checkSession = async () => {
-      try {
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Session check error:", error);
-          if (mounted) {
-            navigate('/login');
-          }
-          return;
-        }
-
-        if (!currentSession && mounted) {
-          navigate('/login');
-          return;
-        }
-
-        if (mounted) {
-          setSession(currentSession);
-          
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', currentSession.user.id)
-            .single();
-
-          if (profile?.role === 'superadmin') {
-            navigate('/admin');
-          }
-        }
-      } catch (error) {
-        console.error("Session check error:", error);
-        if (mounted) {
-          navigate('/login');
-        }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate('/login');
+        return;
       }
-    };
-
-    checkSession();
+      setSession(session);
+    });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      if (!mounted) return;
-
-      if (newSession) {
-        setSession(newSession);
-        
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', newSession.user.id)
-          .single();
-
-        if (profile?.role === 'superadmin') {
-          navigate('/admin');
-        }
-      } else {
-        setSession(null);
-        navigate('/login');
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (_event === 'SIGNED_OUT') {
+        navigate('/');
+        toast({
+          title: "Signed out successfully",
+        });
       }
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, [navigate, toast]);
 
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-white">
-      <DashboardHeader />
-      <div className="max-w-4xl mx-auto space-y-8">
-        <DashboardContent 
-          userId={session.user.id}
-          onUploadSuccess={handleUploadSuccess}
-        />
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b">
+        <div className="max-w-5xl mx-auto flex h-16 items-center justify-between px-4">
+          <h1 className="text-xl font-semibold text-gray-900">CSS Host</h1>
+          <Button variant="ghost" size="sm" onClick={() => supabase.auth.signOut()}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        <div className="space-y-8">
+          <section>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">
+              Upload Files
+            </h2>
+            <FileUpload 
+              userId={session.user.id} 
+              onUploadSuccess={handleUploadSuccess}
+            />
+          </section>
+
+          <section>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">
+              Your Files
+            </h2>
+            <FileGallery 
+              key={key} 
+              userId={session.user.id} 
+            />
+          </section>
+        </div>
+      </main>
     </div>
   );
 };

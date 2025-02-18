@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { FileGalleryList } from "./files/FileGalleryList";
+import { FileList } from "./files/FileList";
 
 type FileGalleryProps = {
   userId: string;
@@ -15,7 +15,6 @@ type File = {
   type: "css" | "js";
   size: number;
   created_at: string;
-  last_edited_at: string | null;
 };
 
 export const FileGallery = ({ userId }: FileGalleryProps) => {
@@ -92,5 +91,12 @@ export const FileGallery = ({ userId }: FileGalleryProps) => {
     }
   };
 
-  return <FileGalleryList files={files} onDelete={deleteFile} />;
+  return (
+    <div className="space-y-6">
+      <FileList
+        files={files}
+        onDelete={deleteFile}
+      />
+    </div>
+  );
 };
